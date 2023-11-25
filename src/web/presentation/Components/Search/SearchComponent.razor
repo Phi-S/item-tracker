@@ -1,0 +1,51 @@
+﻿@namespace presentation.Components.Search
+@inject ItemTrackerApiService ItemTrackerApiService
+@inject IAccessTokenProvider TokenProvider
+@using shared.Models
+@using infrastructure.ItemTrackerApi
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using presentation.Components.Pages
+
+<input type="text" @oninput="OnInput"/>
+@foreach (var searchResult in _itemSearchResponses)
+{
+    <p>@searchResult</p>
+}
+
+@code {
+    private readonly List<ItemSearchResponse> _itemSearchResponses = new();
+    private string? _accessToken = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var tokenResponse = await TokenProvider.RequestAccessToken();
+        if (tokenResponse.TryGetToken(out var accessToken))
+        {
+            _accessToken = accessToken.Value;
+        }
+    }
+
+    private async Task OnInput(ChangeEventArgs obj)
+    {
+        var searchText = obj.Value?.ToString()?.Trim();
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 3)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_accessToken))
+        {
+            throw new Exception("No access token set");
+        }
+
+        var searchResult = await ItemTrackerApiService.Search(searchText, _accessToken);
+        if (searchResult.IsError)
+        {
+            throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
+        }
+        _itemSearchResponses.Clear();
+        _itemSearchResponses.AddRange(searchResult.Value);
+        StateHasChanged();
+    }
+
+}

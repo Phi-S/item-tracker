@@ -1,0 +1,65 @@
+﻿using ErrorOr;
+using infrastructure.Database.Models;
+using infrastructure.Items;
+using shared.Models;
+
+namespace infrastructure.Mapper;
+
+public static class ItemListMapper
+{
+    public static IEnumerable<ListMiniResponse> MapToListMiniResponse(IEnumerable<ItemListDbModel> itemLists)
+    {
+        foreach (var list in itemLists)
+        {
+            yield return new ListMiniResponse(
+                list.Name,
+                list.Url,
+                list.Public);
+        }
+    }
+
+    public static ErrorOr<ListResponse> MapToListResponse(
+        ItemListDbModel itemListDbModel,
+        List<ItemListValueDbModel> itemListValues,
+        List<ItemListItemActionDbModel> itemListItemActions,
+        ItemsService itemsService)
+    {
+        var items = new List<ListItemResponse>();
+        foreach (var itemListItemAction in itemListItemActions)
+        {
+            var itemInfo = itemsService.GetById(itemListItemAction.ItemId);
+            if (itemInfo.IsError)
+            {
+                return itemInfo.FirstError;
+            }
+
+            var item = new ListItemResponse(
+                itemListItemAction.Id,
+                itemListItemAction.ItemId,
+                itemInfo.Value.Image,
+                itemListItemAction.Action,
+                itemListItemAction.PricePerOne,
+                itemListItemAction.Amount,
+                itemListItemAction.CreatedUtc);
+            items.Add(item);
+        }
+
+        var listValues = new List<ListValueResponse>();
+        foreach (var itemListValue in itemListValues)
+        {
+            var listValue = new ListValueResponse(itemListValue.Value, itemListValue.CreatedUtc);
+            listValues.Add(listValue);
+        }
+
+        var listResponse = new ListResponse(
+            itemListDbModel.Name,
+            itemListDbModel.Description,
+            itemListDbModel.Url,
+            itemListDbModel.Currency.ToString(),
+            itemListDbModel.Public,
+            items,
+            listValues);
+
+        return listResponse;
+    }
+}
