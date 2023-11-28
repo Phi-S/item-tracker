@@ -12,8 +12,8 @@ public static class ItemListEndpoint
 
         var group = endpoints.MapGroup(tag)
             .WithOpenApi()
-            .RequireAuthorization()
-            .WithTags(tag);
+            .WithTags(tag)
+            .RequireAuthorization();
 
         group.MapGet("/all", async (
             ILogger<Program> logger,
@@ -61,16 +61,17 @@ public static class ItemListEndpoint
             var userId = context.User.Id();
             if (userId.IsError)
             {
-                var errorString = userId.FirstError.Description;
-                logger.LogError("UserId error: {Error}", errorString);
-                return Results.Extensions.Unauthorized(errorString);
+                var publicListResponse = await listCommandService.GetPublic(url);
+                return publicListResponse.IsError
+                    ? Results.Extensions.InternalServerError(publicListResponse.FirstError.Description)
+                    : Results.Ok(publicListResponse.Value);
             }
 
             var listResponse = await listCommandService.Get(userId.Value, url);
             return listResponse.IsError
                 ? Results.Extensions.InternalServerError(listResponse.FirstError.Description)
                 : Results.Ok(listResponse.Value);
-        });
+        }).AllowAnonymous();
 
         group.MapPost("{url}/delete", async (
             ILogger<Program> logger,

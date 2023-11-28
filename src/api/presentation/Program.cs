@@ -1,6 +1,7 @@
 using application;
 using infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using presentation;
 using presentation.Endpoints;
@@ -14,32 +15,50 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    const string myAllowSpecificOrigins = "_myAllowSpecificOrigins";
     var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog((context, configuration) =>
     {
         configuration.ReadFrom.Configuration(context.Configuration);
+    });
+    
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy(name: myAllowSpecificOrigins,
+            policy  =>
+            {
+                policy.WithHeaders("authorization");
+                policy.WithHeaders("content-type");
+                policy.WithOrigins("https://localhost:7247");
+            });
     });
 
     var authenticationAuthority = builder.Configuration.GetSection("AuthenticationAuthority").Value;
     authenticationAuthority.ThrowIfNull().IfEmpty().IfWhiteSpace();
     Log.Logger.Information("AuthenticationAuthority: {AuthenticationAuthority}", authenticationAuthority);
     
-
     var exchangeRateApiKey = builder.Configuration.GetValue<string>("ExchangeRatesApiKey");
     exchangeRateApiKey.ThrowIfNull().IfEmpty().IfWhiteSpace();
     Log.Logger.Information("ExchangeRatesApiKey: {ExchangeRatesApiKey}", exchangeRateApiKey);
 
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, o =>
+    builder.Services.AddAuthentication(options =>
         {
-            o.MetadataAddress = $"{authenticationAuthority}/.well-known/openid-configuration";
-            o.Authority = authenticationAuthority;
-            o.Audience = "account";
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+        {
+            options.Authority = authenticationAuthority;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                ValidateAudience = false
+            };
         });
     builder.Services.AddAuthorization();
 
-    builder.Services.AddApplication();
     builder.Services.AddInfrastructure();
+    builder.Services.AddApplication();
 
     builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();
     builder.Services.AddEndpointsApiExplorer();
@@ -75,6 +94,7 @@ try
     app.UseSwagger();
     app.UseSwaggerUI(options => options.EnablePersistAuthorization());
 
+    app.UseCors(myAllowSpecificOrigins);
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();

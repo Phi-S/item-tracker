@@ -39,7 +39,7 @@ public class ListCommandService
         var isCurrencyValid = CurrenciesHelper.IsCurrencyValid(newListModel.Currency);
         if (isCurrencyValid == false)
         {
-            return Error.Conflict($"Currency \"{newListModel.Currency}\" is not a valid currency");
+            return Error.Conflict(description: $"Currency \"{newListModel.Currency}\" is not a valid currency");
         }
 
         // TODO: check if list name is already used by user
@@ -66,7 +66,21 @@ public class ListCommandService
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized("You dont have access to this list");
+            return Error.Unauthorized(description: "You dont have access to this list");
+        }
+
+        var listValues = await _itemListValueRepo.GetAll(list);
+        var items = await _itemListItemRepo.GetItemsForList(list);
+        var listResponse = ItemListMapper.MapToListResponse(list, listValues, items, _itemsService);
+        return listResponse;
+    }
+
+    public async Task<ErrorOr<ListResponse>> GetPublic(string listUrl)
+    {
+        var list = await _itemListRepo.GetByUrl(listUrl);
+        if (list.Public == false)
+        {
+            return Error.Unauthorized(description: "You dont have access to this list");
         }
 
         var listValues = await _itemListValueRepo.GetAll(list);

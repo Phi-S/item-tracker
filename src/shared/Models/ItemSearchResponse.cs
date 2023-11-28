@@ -1,3 +1,9 @@
-﻿namespace shared.Models;
+﻿using System.Text.Json.Serialization;
 
-public record ItemSearchResponse(long Id, string Name, string Image);
+namespace shared.Models;
+
+public record ItemSearchResponse(
+    [property: JsonPropertyName("id")]long Id,
+    [property: JsonPropertyName("name")]string Name,
+    [property: JsonPropertyName("image")]string Image
+    );

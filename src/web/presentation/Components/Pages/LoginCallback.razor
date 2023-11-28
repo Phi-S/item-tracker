@@ -1,0 +1,31 @@
+﻿@page "/login-callback"
+@using presentation.Authentication
+@using Microsoft.AspNetCore.WebUtilities
+@inject CognitoAuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavManager
+
+<h1>@_message</h1>
+
+@code{
+
+    private string _message = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        var queries = QueryHelpers.ParseQuery(uri.Query);
+        if (queries.TryGetValue("code", out var authorizationCode))
+        {
+            var urlWithoutQuery = uri.AbsoluteUri[..uri.AbsoluteUri.IndexOf("?", StringComparison.Ordinal)];
+            var login = await AuthenticationStateProvider.Login(authorizationCode.ToString(), urlWithoutQuery);
+            if (login.IsError)
+            {
+                _message = "Failed to login. Authorization code not valid";
+                return;
+            }
+
+            NavManager.NavigateTo(NavManager.BaseUri, true);
+        }
+    }
+
+}

@@ -1,23 +1,21 @@
+using Blazored.LocalStorage;
 using infrastructure;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using presentation.Authentication;
 using presentation.Components;
-using Throw;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddHttpClient();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<CognitoAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(s => s.GetRequiredService<CognitoAuthenticationStateProvider>());
 
-builder.Services.AddOidcAuthentication(options =>
-{
-    builder.Configuration.Bind("Oidc", options.ProviderOptions);
-    options.UserOptions.NameClaim = "nickname";
-});
-
-
-var apiEndpoint = builder.Configuration.GetSection("ITEM_TRACKER_API_ENDPOINT").Value;
-apiEndpoint.ThrowIfNull();
-builder.Services.AddInfrastructure(apiEndpoint);
+builder.Services.AddInfrastructure();
 
 await builder.Build().RunAsync();

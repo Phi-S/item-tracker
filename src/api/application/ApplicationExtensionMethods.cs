@@ -9,6 +9,7 @@ public static class ApplicationExtensionMethods
     {
         serviceCollection.AddScoped<ListCommandService>();
         serviceCollection.AddScoped<PriceCommandService>();
+        serviceCollection.AddScoped<ItemCommandService>();
         return serviceCollection;
     }
 }

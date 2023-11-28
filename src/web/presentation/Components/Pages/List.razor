@@ -1,0 +1,62 @@
+﻿@page "/list/{ListUrl}"
+@using shared.Models
+@using infrastructure.ItemTrackerApi
+@using presentation.Authentication
+@using Throw
+@inject ItemTrackerApiService ItemTrackerApiService
+@inject CognitoAuthenticationStateProvider AuthenticationStateProvider
+
+@if (_unauthorized)
+{
+    <h3>You dont have access to this list</h3>
+}
+else
+{
+@if (_list is null)
+{
+    <h1>loading...</h1>
+}
+else
+{
+    <h1>@_list.Name</h1>
+    <h2>@_list.Description</h2>
+    <h3>@_list.Public</h3>
+}
+}
+
+@code
+{
+    [Parameter, EditorRequired]
+    public string ListUrl { get; set; } = null!;
+
+    private ListResponse? _list;
+    private bool _unauthorized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            var publicList = await ItemTrackerApiService.GetPublicList(ListUrl);
+            if (publicList.IsError)
+            {
+                _unauthorized = true;
+                return;
+            }
+
+            _list = publicList.Value;
+            _unauthorized = false;
+            return;
+        }
+
+        var list = await ItemTrackerApiService.GetList(accessToken, ListUrl);
+        if (list.IsError)
+        {
+            throw new Exception(list.FirstError.Description);
+        }
+
+        _list = list.Value;
+        _unauthorized = false;
+    }
+
+}

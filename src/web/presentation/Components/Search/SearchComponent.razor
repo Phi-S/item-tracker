@@ -1,51 +1,93 @@
 ﻿@namespace presentation.Components.Search
-@inject ItemTrackerApiService ItemTrackerApiService
-@inject IAccessTokenProvider TokenProvider
 @using shared.Models
 @using infrastructure.ItemTrackerApi
-@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
-@using presentation.Components.Pages
+@using presentation.Authentication
+@using Throw
+@inject CognitoAuthenticationStateProvider AuthenticationStateProvider
+@inject ItemTrackerApiService ItemTrackerApiService
 
-<input type="text" @oninput="OnInput"/>
-@foreach (var searchResult in _itemSearchResponses)
-{
-    <p>@searchResult</p>
-}
+
+<AuthorizeView>
+    <Authorized>
+
+        <input type="text" @oninput="OnInput"/>
+        @foreach (var searchResult in _itemSearchResponses)
+        {
+            <p>@searchResult</p>
+        }
+    </Authorized>
+</AuthorizeView>
 
 @code {
     private readonly List<ItemSearchResponse> _itemSearchResponses = new();
     private string? _accessToken = null;
+    private string? _searchBoxContent = "";
 
     protected override async Task OnInitializedAsync()
     {
-        var tokenResponse = await TokenProvider.RequestAccessToken();
-        if (tokenResponse.TryGetToken(out var accessToken))
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var accessToken = authenticationState.User.Claims.AccessToken();
+        accessToken.ThrowIfNull().IfEmpty().IfWhiteSpace();
+        _accessToken = accessToken;
+    }
+
+    private volatile bool _backgroundTaskRunning = false;
+    private DateTime _lastInput;
+
+    private void StartBackgroundTask()
+    {
+        _lastInput = DateTime.Now;
+        if (_backgroundTaskRunning)
         {
-            _accessToken = accessToken.Value;
+            return;
         }
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                _backgroundTaskRunning = true;
+                while (true)
+                {
+                    await Task.Delay(50);
+                    if (string.IsNullOrWhiteSpace(_accessToken))
+                    {
+                        throw new Exception("No access token set");
+                    }
+
+                    var timeSinceLastInput = DateTime.Now - _lastInput;
+                    Console.WriteLine(nameof(timeSinceLastInput) + ": " + timeSinceLastInput);
+                    if (timeSinceLastInput.TotalMilliseconds > 1000)
+                    {
+                        if (string.IsNullOrWhiteSpace(_searchBoxContent) || _searchBoxContent.Length < 3)
+                        {
+                            break;
+                        }
+
+                        var searchResult = await ItemTrackerApiService.Search(_searchBoxContent, _accessToken);
+                        if (searchResult.IsError)
+                        {
+                            throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
+                        }
+                        _itemSearchResponses.Clear();
+                        _itemSearchResponses.AddRange(searchResult.Value);
+                        StateHasChanged();
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                _backgroundTaskRunning = false;
+            }
+        });
     }
 
     private async Task OnInput(ChangeEventArgs obj)
     {
         var searchText = obj.Value?.ToString()?.Trim();
-        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 3)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(_accessToken))
-        {
-            throw new Exception("No access token set");
-        }
-
-        var searchResult = await ItemTrackerApiService.Search(searchText, _accessToken);
-        if (searchResult.IsError)
-        {
-            throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
-        }
-        _itemSearchResponses.Clear();
-        _itemSearchResponses.AddRange(searchResult.Value);
-        StateHasChanged();
+        _searchBoxContent = searchText;
+        StartBackgroundTask();
     }
 
 }

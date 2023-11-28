@@ -12,6 +12,7 @@ public static class ItemsEndpoint
         var group = endpoints.MapGroup(tag)
             .WithOpenApi()
             .RequireAuthorization()
+            .RequireCors("_myAllowSpecificOrigins")
             .WithTags(tag);
 
         group.MapPost("search", async (

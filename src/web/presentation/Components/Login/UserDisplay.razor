@@ -1,0 +1,46 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using presentation.Authentication
+@inject CognitoAuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<AuthorizeView>
+    <Authorized>
+        <div class="dropdown position-relative">
+            <a class="dropdown-toggle text-decoration-none nav-link" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+                <i>@context.User.Identity?.Name</i>
+            </a>
+            <ul class="dropdown-menu shadow" aria-labelledby="dropdownUser">
+                <li>
+                    <a class="dropdown-item" href="#">Profile</a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" @onclick="LogOut">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <button class="btn btn-dark" @onclick="Login">Log in</button>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code{
+
+    private void Login()
+    {
+        Navigation.NavigateTo(AuthenticationStateProvider.GetLoginRedirectUrl($"{Navigation.BaseUri}login-callback"), true);
+    }
+
+    private async Task LogOut()
+    {
+        var revoke = await AuthenticationStateProvider.Revoke();
+        if (revoke.IsError == false)
+        {
+            Navigation.NavigateTo(Navigation.BaseUri, true);
+            StateHasChanged();
+        }
+    }
+
+}

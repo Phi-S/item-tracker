@@ -53,6 +53,7 @@ public class ItemsService
 
     public ErrorOr<List<ItemModel>> Search(string searchString)
     {
-        return _itemList.Where(model => model.Name.Contains(searchString, StringComparison.CurrentCultureIgnoreCase)).ToList();
+        return _itemList.Where(model => model.Name.Contains(searchString, StringComparison.CurrentCultureIgnoreCase))
+            .Take(10).ToList();
     }
 }
