@@ -74,15 +74,22 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
 
             if (DateTime.UtcNow > token.ExpirationUtc)
             {
-                _logger.LogInformation("Token is expired");
-                await _localStorageService.RemoveItemAsync(TokenKey);
-                return ReturnNotAuthenticated();
+                _logger.LogInformation("Token has expired. Trying to refresh");
+                var refresh = await Refresh(token.RefreshToken);
+                if (refresh.IsError)
+                {
+                    _logger.LogInformation("Failed to refresh token");
+                    await _localStorageService.RemoveItemAsync(TokenKey);
+                    return ReturnNotAuthenticated();
+                }
+
+                await _localStorageService.SetItemAsync(TokenKey, refresh.Value);
+                token = refresh.Value;
             }
 
             var userInfo = await UserInfo(token.AccessToken);
             if (userInfo.IsError)
             {
-                // TODO: refresh token.... 
                 _logger.LogInformation("AccessToken is not valid");
                 await _localStorageService.RemoveItemAsync(TokenKey);
                 return ReturnNotAuthenticated();
@@ -166,6 +173,38 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         return Result.Success;
     }
 
+    public async Task<ErrorOr<TokenResponseModel>> Refresh(string refreshToken)
+    {
+        var request = new HttpRequestMessage();
+        request.Method = HttpMethod.Post;
+        request.RequestUri = new Uri($"{_authority}/oauth2/token");
+        request.Content = new FormUrlEncodedContent(new[]
+        {
+            new KeyValuePair<string, string>("grant_type", "refresh_token"),
+            new KeyValuePair<string, string>("client_id", _clientId),
+            new KeyValuePair<string, string>("refresh_token", refreshToken),
+        });
+
+        var response = await _httpClient.SendAsync(request);
+        if (response.IsSuccessStatusCode == false)
+        {
+            _logger.LogError("Refresh api call failed with status code {StatusCode}", response.StatusCode);
+            return Error.Failure();
+        }
+
+        var jsonResponse = await response.Content.ReadAsStringAsync();
+        var tokenResponseModel = JsonSerializer.Deserialize<TokenResponseModel>(jsonResponse);
+        if (tokenResponseModel is null)
+        {
+            _logger.LogError("Failed to deserialize json response. {JsonResponse}", jsonResponse);
+            return Error.Failure();
+        }
+
+        var currentDateTime = DateTime.UtcNow;
+        tokenResponseModel.ExpirationUtc = currentDateTime.Add(TimeSpan.FromSeconds(tokenResponseModel.ExpiresIn));
+        return tokenResponseModel;
+    }
+
     public async Task<ErrorOr<Success>> Revoke()
     {
         var token = await _localStorageService.GetItemAsync<TokenResponseModel>(TokenKey);
@@ -180,7 +219,6 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         var request = new HttpRequestMessage();
         request.Method = HttpMethod.Post;
         request.RequestUri = new Uri($"{_authority}/oauth2/revoke");
-        //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
         request.Content = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("client_id", _clientId),

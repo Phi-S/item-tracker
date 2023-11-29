@@ -27,8 +27,7 @@ public class GlobalExceptionHandlerMiddleware(ILogger<GlobalExceptionHandlerMidd
         var path = context.Request.Path;
         var traceId = context.TraceIdentifier;
         var statusCode = context.Response.StatusCode;
-        var userIdResult = context.User.Id();
-        var userId = userIdResult.IsError ? "NoUserIdFound" : userIdResult.Value;
+        var userId = context.User.Id();
 
         using (logger.BeginScope(new Dictionary<string, object>
                {

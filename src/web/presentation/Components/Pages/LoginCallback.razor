@@ -4,11 +4,12 @@
 @inject CognitoAuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavManager
 
-<h1>@_message</h1>
+<ErrorComponent @ref="ErrorComponentRef">
+</ErrorComponent>
 
 @code{
 
-    private string _message = "";
+    private ErrorComponent ErrorComponentRef { get; set; } = null!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -20,7 +21,7 @@
             var login = await AuthenticationStateProvider.Login(authorizationCode.ToString(), urlWithoutQuery);
             if (login.IsError)
             {
-                _message = "Failed to login. Authorization code not valid";
+                ErrorComponentRef.SetError("Failed to login. Authorization code not valid");
                 return;
             }
 

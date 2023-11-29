@@ -12,30 +12,16 @@ public static class ItemsEndpoint
         var group = endpoints.MapGroup(tag)
             .WithOpenApi()
             .RequireAuthorization()
-            .RequireCors("_myAllowSpecificOrigins")
             .WithTags(tag);
 
-        group.MapPost("search",  (
-            ILogger<Program> logger,
-            HttpContext context,
+        group.MapPost("search", (
             ItemCommandService itemCommandService,
             [FromQuery] string searchString) =>
         {
-            var userId = context.User.Id();
-            if (userId.IsError)
-            {
-                var errorString = userId.FirstError.Description;
-                logger.LogError("UserId error: {Error}", errorString);
-                return Results.Extensions.Unauthorized(errorString);
-            }
-
             var searchResult = itemCommandService.Search(searchString);
-            if (searchResult.IsError)
-            {
-                return Results.Extensions.InternalServerError(searchResult.FirstError.Description);
-            }
-
-            return Results.Ok(searchResult.Value);
+            return searchResult.IsError
+                ? Results.Extensions.InternalServerError(searchResult.FirstError.Description)
+                : Results.Ok(searchResult.Value);
         });
     }
 }

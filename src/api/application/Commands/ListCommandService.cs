@@ -30,14 +30,24 @@ public class ListCommandService
     }
 
 
-    public async Task<IEnumerable<ListMiniResponse>> GetAllForUser(string userid)
+    public async Task<ErrorOr<List<ListMiniResponse>>> GetAllForUser(string? userId)
     {
-        var lists = await _itemListRepo.GetAllForUserSub(userid);
-        return ItemListMapper.MapToListMiniResponse(lists);
+        if (userId is null)
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+        
+        var lists = await _itemListRepo.GetAllForUserSub(userId);
+        return ItemListMapper.MapToListMiniResponse(lists).ToList();
     }
 
-    public async Task<ErrorOr<ListResponse>> New(string userId, NewListModel newListModel)
+    public async Task<ErrorOr<ListResponse>> New(string? userId, NewListModel newListModel)
     {
+        if (userId is null)
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+        
         var isCurrencyValid = CurrenciesHelper.IsCurrencyValid(newListModel.Currency);
         if (isCurrencyValid == false)
         {
@@ -81,8 +91,13 @@ public class ListCommandService
         return listResponse;
     }
 
-    public async Task<ErrorOr<Deleted>> Delete(string userId, string listUrl)
+    public async Task<ErrorOr<Deleted>> Delete(string? userId, string listUrl)
     {
+        if (userId is null)
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+        
         var listToDelete = await _itemListRepo.GetByUrl(listUrl);
         if (listToDelete.UserId.Equals(userId) == false)
         {
@@ -93,9 +108,18 @@ public class ListCommandService
         return Result.Deleted;
     }
 
-    public async Task<ErrorOr<Created>> BuyItem(string userId, string listUrl, long itemId, decimal price,
+    public async Task<ErrorOr<Created>> BuyItem(
+        string? userId,
+        string listUrl,
+        long itemId,
+        decimal price,
         long amount)
     {
+        if (userId is null)
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+        
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {
@@ -106,9 +130,18 @@ public class ListCommandService
         return Result.Created;
     }
 
-    public async Task<ErrorOr<Created>> SellItem(string userId, string listUrl, long itemId, decimal price,
+    public async Task<ErrorOr<Created>> SellItem(
+        string? userId,
+        string listUrl,
+        long itemId,
+        decimal price,
         long amount)
     {
+        if (userId is null)
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+        
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {
@@ -119,8 +152,13 @@ public class ListCommandService
         return Result.Created;
     }
 
-    public async Task<ErrorOr<Deleted>> DeleteItemAction(string userId, string listUrl, long itemActionId)
+    public async Task<ErrorOr<Deleted>> DeleteItemAction(string? userId, string listUrl, long itemActionId)
     {
+        if (userId is null)
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+        
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {

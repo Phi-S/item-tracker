@@ -15,29 +15,20 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    const string myAllowSpecificOrigins = "_myAllowSpecificOrigins";
     var builder = WebApplication.CreateBuilder(args);
     builder.Host.UseSerilog((context, configuration) =>
     {
         configuration.ReadFrom.Configuration(context.Configuration);
     });
-    
-    builder.Services.AddCors(options =>
-    {
-        options.AddPolicy(name: myAllowSpecificOrigins,
-            policy  =>
-            {
-                policy.WithMethods("GET", "POST", "DELETE");
-                policy.WithHeaders("authorization");
-                policy.WithHeaders("content-type");
-                policy.WithOrigins("https://localhost:7247");
-            });
-    });
+
+    var corsOrigin = builder.Configuration.GetValue<string>("CorsOrigin");
+    corsOrigin.ThrowIfNull().IfEmpty().IfWhiteSpace();
+    Log.Logger.Information("CorsOrigin: {CorsOrigin}", corsOrigin);
 
     var authenticationAuthority = builder.Configuration.GetSection("AuthenticationAuthority").Value;
     authenticationAuthority.ThrowIfNull().IfEmpty().IfWhiteSpace();
     Log.Logger.Information("AuthenticationAuthority: {AuthenticationAuthority}", authenticationAuthority);
-    
+
     var exchangeRateApiKey = builder.Configuration.GetValue<string>("ExchangeRatesApiKey");
     exchangeRateApiKey.ThrowIfNull().IfEmpty().IfWhiteSpace();
     Log.Logger.Information("ExchangeRatesApiKey: {ExchangeRatesApiKey}", exchangeRateApiKey);
@@ -57,6 +48,17 @@ try
             };
         });
     builder.Services.AddAuthorization();
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.WithMethods("GET", "POST", "DELETE");
+            policy.WithHeaders("authorization");
+            policy.WithHeaders("content-type");
+            policy.WithOrigins(corsOrigin);
+        });
+    });
 
     builder.Services.AddInfrastructure();
     builder.Services.AddApplication();
@@ -95,7 +97,7 @@ try
     app.UseSwagger();
     app.UseSwaggerUI(options => options.EnablePersistAuthorization());
 
-    app.UseCors(myAllowSpecificOrigins);
+    app.UseCors();
     app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();
