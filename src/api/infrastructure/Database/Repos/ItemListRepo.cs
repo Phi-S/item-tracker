@@ -1,15 +1,36 @@
 ﻿using infrastructure.Database.Models;
 using Microsoft.EntityFrameworkCore;
+using shared.Models.ListResponse;
 
 namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
+    public record AllResult(
+        ItemListDbModel List,
+        IEnumerable<ItemListValueDbModel> Values,
+        IEnumerable<ItemListItemActionDbModel> Items
+    );
+
+    public List<Tuple<ItemListDbModel, List<ItemListValueDbModel>, List<ItemListItemActionDbModel>>> All(
+        string userId)
+    {
+        var result =
+            dbContext.ItemLists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
+                .Select(list => Tuple.Create(
+                    list,
+                    dbContext.ItemListValues.Where(value => value.ItemListDbModel.Id == list.Id).ToList(),
+                    dbContext.ItemListItemAction.Where(item => item.ItemListDbModel.Id == list.Id).ToList()
+                )).ToList();
+        return result;
+    }
+
     public async Task<bool> ExistsWithNameForUser(string userId, string listName)
     {
-        return await dbContext.ItemLists.AnyAsync(list => list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
+        return await dbContext.ItemLists.AnyAsync(list =>
+            list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
     }
-    
+
     public async Task<ItemListDbModel> GetByUrl(string url)
     {
         return await dbContext.ItemLists.FirstAsync(list => list.Deleted == false && list.Url.Equals(url));

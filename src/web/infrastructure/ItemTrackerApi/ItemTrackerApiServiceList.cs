@@ -12,7 +12,7 @@ namespace infrastructure.ItemTrackerApi;
 [SuppressMessage("Maintainability", "CA1507:Use nameof to express symbol names")]
 public partial class ItemTrackerApiService
 {
-    public async Task<ErrorOr<List<ListMiniResponse>>> All(string accessToken)
+    public async Task<ErrorOr<List<ListResponse>>> All(string accessToken)
     {
         var url = $"{_apiEndpointUrl}/list/all";
         var response = await GetWithAuthAsync(url, accessToken);
@@ -21,7 +21,7 @@ public partial class ItemTrackerApiService
             return response.FirstError;
         }
 
-        var result = JsonSerializer.Deserialize<List<ListMiniResponse>>(response.Value, SerializerOptions);
+        var result = JsonSerializer.Deserialize<List<ListResponse>>(response.Value, SerializerOptions);
         if (result is null)
         {
             return Error.Failure("Failed to deserialize json");
@@ -84,12 +84,12 @@ public partial class ItemTrackerApiService
         decimal price,
         long amount)
     {
-        var urlTest = new Uri($"{_apiEndpointUrl}/list/{listUrl}/buy-item");
-        urlTest.AddParameter("itemId", itemId.ToString());
-        urlTest.AddParameter("price", price.ToString(CultureInfo.InvariantCulture));
-        urlTest.AddParameter("amount", amount.ToString());
+        var uri = new Uri($"{_apiEndpointUrl}/list/{listUrl}/buy-item");
+        uri = uri.AddParameter("itemId", itemId.ToString());
+        uri = uri.AddParameter("price", price.ToString(CultureInfo.InvariantCulture));
+        uri = uri.AddParameter("amount", amount.ToString());
 
-        var response = await PostWithAuthAsync(urlTest.AbsoluteUri, accessToken);
+        var response = await PostWithAuthAsync(uri.AbsoluteUri, accessToken);
         if (response.IsError)
         {
             return response.FirstError;
@@ -105,12 +105,12 @@ public partial class ItemTrackerApiService
         decimal price,
         long amount)
     {
-        var urlTest = new Uri($"{_apiEndpointUrl}/list/{listUrl}/sell-item");
-        urlTest.AddParameter("itemId", itemId.ToString());
-        urlTest.AddParameter("price", price.ToString(CultureInfo.InvariantCulture));
-        urlTest.AddParameter("amount", amount.ToString());
+        var uri = new Uri($"{_apiEndpointUrl}/list/{listUrl}/sell-item");
+        uri = uri.AddParameter("itemId", itemId.ToString());
+        uri = uri.AddParameter("price", price.ToString(CultureInfo.InvariantCulture));
+        uri = uri.AddParameter("amount", amount.ToString());
 
-        var response = await PostWithAuthAsync(urlTest.AbsoluteUri, accessToken);
+        var response = await PostWithAuthAsync(uri.AbsoluteUri, accessToken);
         if (response.IsError)
         {
             return response.FirstError;

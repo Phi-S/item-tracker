@@ -1,4 +1,5 @@
-﻿using infrastructure.ItemTrackerApi;
+﻿using ApexCharts;
+using infrastructure.ItemTrackerApi;
 using Microsoft.AspNetCore.Components;
 using presentation.Authentication;
 using presentation.Components.Custom;
@@ -17,7 +18,7 @@ public class ListsRazor : ComponentBase
 
     protected ErrorComponent ErrorComponentRef { get; set; } = null!;
     protected Modal NewListModalRef { get; set; } = null!;
-    protected List<ListMiniResponse>? Lists;
+    protected List<ListResponse>? Lists;
 
     protected NewListModel NewListModel = new();
 
@@ -60,25 +61,6 @@ public class ListsRazor : ComponentBase
         {
             Logger.LogError("Failed to create new list. {Error}", newList.FirstError.Description);
         }
-    }
-    
-    protected async Task DeleteList(string listUrl)
-    {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            throw new Exception("Access token is not set. This should never happen");
-        }
-
-        var deleteList = await ItemTrackerApiService.Delete(accessToken, listUrl);
-        if (deleteList.IsError)
-        {
-            Logger.LogError("Failed to delete list {ListUrl}. {Error}", listUrl, deleteList.FirstError.Description);
-            //TODO: alert?
-            return;
-        }
-        
-        NavigationManager.Refresh();
     }
 
     protected void OpenNewListModal()

@@ -69,7 +69,7 @@ public class PriceCommandService
                 eurBuffPrice = price.BuffPrice.Value * (decimal)exchangeRate.Value;
             }
 
-            var dbPrice = new ItemPriceDbModel()
+            var dbPrice = new ItemPriceDbModel
             {
                 ItemId = item.Value.Id,
                 SteamPriceUsd = price.SteamPrice,
@@ -87,6 +87,8 @@ public class PriceCommandService
             string.Join("\n", itemPricesNotFountByItemsService));
 
         await _itemPriceRepo.Add(dbPrices);
+
+        //TODO: add list value with new item prices
         return Result.Success;
     }
 }

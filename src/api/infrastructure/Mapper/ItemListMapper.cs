@@ -1,24 +1,12 @@
 ﻿using ErrorOr;
 using infrastructure.Database.Models;
 using infrastructure.Items;
-using shared.Models;
 using shared.Models.ListResponse;
 
 namespace infrastructure.Mapper;
 
 public static class ItemListMapper
 {
-    public static IEnumerable<ListMiniResponse> MapToListMiniResponse(IEnumerable<ItemListDbModel> itemLists)
-    {
-        foreach (var list in itemLists)
-        {
-            yield return new ListMiniResponse(
-                list.Name,
-                list.Url,
-                list.Public);
-        }
-    }
-
     public static ErrorOr<ListResponse> MapToListResponse(
         ItemListDbModel itemListDbModel,
         List<ItemListValueDbModel> itemListValues,
@@ -37,6 +25,7 @@ public static class ItemListMapper
             var item = new ListItemResponse(
                 itemListItemAction.Id,
                 itemListItemAction.ItemId,
+                itemInfo.Value.Name,
                 itemInfo.Value.Image,
                 itemListItemAction.Action,
                 itemListItemAction.PricePerOne,

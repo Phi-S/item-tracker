@@ -1,4 +1,5 @@
 ﻿@page "/list/{ListUrl}"
+@using application.Helper
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
@@ -8,8 +9,23 @@
     }
     else
     {
-        <h1>@ListResponse.Name</h1>
-        <h2>@ListResponse.Description</h2>
-        <h3>@ListResponse.Public</h3>
+        <ListDisplay List="ListResponse"/>
+        <div class="input-group">
+            <div class="col-10">
+                <SearchComponent OnItemSelected="BuyItem"></SearchComponent>
+            </div>
+            <button class="btn btn-info form-control">Add entry</button>
+        </div>
+
+        <div class="container">
+            @foreach (var item in ListResponse.Items)
+            {
+                <div>
+                    <img src="@item.ItemImage" alt="" style="height: 50px"/>
+                    <span>@item.ItemName</span>
+                    <span>@item.PricePerOne x @CurrencyHelper.FormatCurrency(ListResponse.Currency, item.PricePerOne)</span>
+                </div>
+            }
+        </div>
     }
 </ErrorComponent>

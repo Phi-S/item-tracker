@@ -1,33 +1,33 @@
 ﻿@page "/lists"
 @using Microsoft.AspNetCore.Authorization
+@using application.Helper
+@using shared.Models.ListResponse
 @inherits ListsRazor
 
 @attribute [Authorize]
 
 <ErrorComponent @ref="ErrorComponentRef">
-    <div class="w-100">
+    <div class="w-100 h-100">
         <button class="btn btn-info w-100" @onclick="OpenNewListModal">Create new list</button>
 
         <Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OpenModalButtonText="+" OkButtonAction="NewList">
-            <ChildContent>
-                <div class="mb-2">
-                    <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
-                </div>
-                <div class="mb-2">
-                    <input @bind="NewListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
-                </div>
-                <div class="form-floating mb-2">
-                    <select @bind="NewListModel.Currency" id="currencySelect" class="form-select">
-                        <option selected value="EUR">€</option>
-                        <option value="USD">$</option>
-                    </select>
-                    <label for="currencySelect">Currency</label>
-                </div>
-                <div class="mb-3">
-                    <input @bind="NewListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
-                    <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
-                </div>
-            </ChildContent>
+            <div class="mb-2">
+                <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
+            </div>
+            <div class="mb-2">
+                <input @bind="NewListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
+            </div>
+            <div class="form-floating mb-2">
+                <select @bind="NewListModel.Currency" id="currencySelect" class="form-select">
+                    <option selected value="EUR">€</option>
+                    <option value="USD">$</option>
+                </select>
+                <label for="currencySelect">Currency</label>
+            </div>
+            <div class="mb-3">
+                <input @bind="NewListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
+                <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
+            </div>
         </Modal>
 
         @if (Lists is null)
@@ -36,15 +36,12 @@
         }
         else
         {
-            foreach (var list in Lists)
-            {
-                
-                <div class="container row w-100 align-items-center border-2 border">
-                    <button class="col-3 btn" @onclick="() => NavigateToList(list.Url)">@list.Name</button>
-                    <p class="col-8 m-0 p-0">asdfasd</p>
-                    <button class="col-1 btn-close" @onclick="() => DeleteList(list.Url)"></button>
-                </div>
-            }
+            <div class="container w-100">
+                @foreach (var list in Lists)
+                {
+                    <ListDisplay List="list"/>
+                }
+            </div>
         }
     </div>
 </ErrorComponent>

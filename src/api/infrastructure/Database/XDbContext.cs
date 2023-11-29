@@ -35,7 +35,10 @@ public class XDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseNpgsql(_databaseConnectionString);
+        optionsBuilder.UseNpgsql(_databaseConnectionString)
+            .LogTo(s => System.Diagnostics.Debug.WriteLine(s))
+            .EnableDetailedErrors()
+            .EnableSensitiveDataLogging();
         base.OnConfiguring(optionsBuilder);
     }
 }

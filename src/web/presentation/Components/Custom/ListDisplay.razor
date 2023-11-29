@@ -1,18 +1,67 @@
-﻿@using shared.Models
-@using application.Helper
+﻿@using application.Helper
+@using infrastructure.ItemTrackerApi
+@using presentation.Authentication
 @using shared.Models.ListResponse
 
-<div class="container w-100 row" style="height: 30px">
-    <span class="col-3">@ListResponse.Name</span>
-    <span class="col-2">@CurrencyHelper.FormatCurrency(ListResponse.Currency, LatestListValue.Value)</span>
-    <span></span>
+<div class="row align-items-center border-2 border mt-2 ms-0 me-0 p-0" style="height: 6rem">
+    <button class="col-2 btn" @onclick="() => NavigateToList(List.Url)">@List.Name</button>
+    <span class="col-1">@ListResponseHelper.GetCurrentValue(List)</span>
+    <div class="col-8 h-100 border border-1 p-0 m-0">
+        <ApexChart TItem="ListValueResponse" Title="" Width="@("100%")" Height="@("100%")">
+            <ApexPointSeries Items="List.ListValues"
+                             Name="List Value"
+                             SeriesType="SeriesType.Line"
+                             XValue="@(e => e.CreatedAt)"
+                             YValue="@(e => e.Value)"
+                             OrderByDescending="e => e.X">
+            </ApexPointSeries>
+        </ApexChart>
+
+    </div>
+    <div class="col-1 text-center">
+        <button class="btn btn-close" @onclick="() => DeleteList(List.Url)"></button>
+    </div>
 </div>
 
 @code
 {
     [Parameter]
     [EditorRequired]
-    public ListResponse ListResponse { get; set; } = null!;
+    public ListResponse List { get; set; } = null!;
 
-    private ListValueResponse LatestListValue => ListResponseHelper.GetLatestListValue(ListResponse);
+    [Inject]
+    public ILogger<ListDisplay> Logger { get; set; } = null!;
+
+    [Inject]
+    public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = null!;
+
+    [Inject]
+    public ItemTrackerApiService ItemTrackerApiService { get; set; } = null!;
+
+    protected void NavigateToList(string listUrl)
+    {
+        NavigationManager.NavigateTo($"/list/{listUrl}");
+    }
+
+    protected async Task DeleteList(string listUrl)
+    {
+        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new Exception("Access token is not set. This should never happen");
+        }
+
+        var deleteList = await ItemTrackerApiService.Delete(accessToken, listUrl);
+        if (deleteList.IsError)
+        {
+            Logger.LogError("Failed to delete list {ListUrl}. {Error}", listUrl, deleteList.FirstError.Description);
+    //TODO: alert?
+            return;
+        }
+
+        NavigationManager.Refresh();
+    }
 }

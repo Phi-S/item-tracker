@@ -1,6 +1,4 @@
 ﻿using System.Security.Claims;
-using ErrorOr;
-using Error = ErrorOr.Error;
 
 namespace presentation;
 

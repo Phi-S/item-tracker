@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices.JavaScript;
-using ErrorOr;
+﻿using ErrorOr;
 using infrastructure.Currencies;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
@@ -30,15 +29,28 @@ public class ListCommandService
     }
 
 
-    public async Task<ErrorOr<List<ListMiniResponse>>> GetAllForUser(string? userId)
+    public async Task<ErrorOr<List<ListResponse>>> GetAllForUser(string? userId)
     {
         if (userId is null)
         {
             return Error.Unauthorized("UserId not found");
         }
-        
-        var lists = await _itemListRepo.GetAllForUserSub(userId);
-        return ItemListMapper.MapToListMiniResponse(lists).ToList();
+
+        var lists = _itemListRepo.All(userId);
+        var result = new List<ListResponse>();
+        foreach (var (list, values, items) in lists)
+        {
+            Console.WriteLine(list.Name);
+            var listResponse = ItemListMapper.MapToListResponse(list, values, items, _itemsService);
+            if (listResponse.IsError)
+            {
+                return listResponse.FirstError;
+            }
+
+            result.Add(listResponse.Value);
+        }
+
+        return result;
     }
 
     public async Task<ErrorOr<ListResponse>> New(string? userId, NewListModel newListModel)
@@ -47,7 +59,7 @@ public class ListCommandService
         {
             return Error.Unauthorized("UserId not found");
         }
-        
+
         var isCurrencyValid = CurrenciesHelper.IsCurrencyValid(newListModel.Currency);
         if (isCurrencyValid == false)
         {
@@ -97,7 +109,7 @@ public class ListCommandService
         {
             return Error.Unauthorized("UserId not found");
         }
-        
+
         var listToDelete = await _itemListRepo.GetByUrl(listUrl);
         if (listToDelete.UserId.Equals(userId) == false)
         {
@@ -119,7 +131,7 @@ public class ListCommandService
         {
             return Error.Unauthorized("UserId not found");
         }
-        
+
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {
@@ -141,7 +153,7 @@ public class ListCommandService
         {
             return Error.Unauthorized("UserId not found");
         }
-        
+
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {
@@ -158,7 +170,7 @@ public class ListCommandService
         {
             return Error.Unauthorized("UserId not found");
         }
-        
+
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.UserId.Equals(userId) == false)
         {

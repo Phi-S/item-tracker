@@ -6,10 +6,12 @@ public class ItemListItemRepo(XDbContext dbContext)
 {
     public async Task<List<ItemListItemActionDbModel>> GetItemsForList(ItemListDbModel listDbModel)
     {
-        return await Task.FromResult(dbContext.ItemListItemAction.Where(item => item.ItemListDbModel.Id == listDbModel.Id).ToList());
+        return await Task.FromResult(dbContext.ItemListItemAction
+            .Where(item => item.ItemListDbModel.Id == listDbModel.Id).ToList());
     }
 
-    public async Task<ItemListItemActionDbModel> Buy(ItemListDbModel itemListDbModel, long itemId, decimal pricePerOne, long amount)
+    public async Task<ItemListItemActionDbModel> Buy(ItemListDbModel itemListDbModel, long itemId, decimal pricePerOne,
+        long amount)
     {
         var currentDate = DateTime.UtcNow;
         var listItem = new ItemListItemActionDbModel
@@ -26,7 +28,8 @@ public class ItemListItemRepo(XDbContext dbContext)
         return addedItem.Entity;
     }
 
-    public async Task<ItemListItemActionDbModel> Sell(ItemListDbModel itemListDbModel, long itemId, decimal pricePerOne, long amount)
+    public async Task<ItemListItemActionDbModel> Sell(ItemListDbModel itemListDbModel, long itemId, decimal pricePerOne,
+        long amount)
     {
         var currentDate = DateTime.UtcNow;
         var listItem = new ItemListItemActionDbModel

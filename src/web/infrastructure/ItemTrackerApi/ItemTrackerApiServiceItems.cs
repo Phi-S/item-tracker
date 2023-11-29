@@ -12,7 +12,7 @@ public partial class ItemTrackerApiService
     {
         var encodedSearchString = HttpUtility.UrlEncode(searchString);
         var url = new Uri($"{_apiEndpointUrl}/items/search");
-        url.AddParameter("searchString", encodedSearchString);
+        url = url.AddParameter("searchString", encodedSearchString);
 
         var response = await PostWithAuthAsync(url.AbsoluteUri, accessToken);
         if (response.IsError)
