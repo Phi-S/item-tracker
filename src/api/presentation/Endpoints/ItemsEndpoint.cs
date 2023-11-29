@@ -15,7 +15,7 @@ public static class ItemsEndpoint
             .RequireCors("_myAllowSpecificOrigins")
             .WithTags(tag);
 
-        group.MapPost("search", async (
+        group.MapPost("search",  (
             ILogger<Program> logger,
             HttpContext context,
             ItemCommandService itemCommandService,

@@ -27,6 +27,7 @@ try
         options.AddPolicy(name: myAllowSpecificOrigins,
             policy  =>
             {
+                policy.WithMethods("GET", "POST", "DELETE");
                 policy.WithHeaders("authorization");
                 policy.WithHeaders("content-type");
                 policy.WithOrigins("https://localhost:7247");

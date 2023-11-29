@@ -1,8 +1,7 @@
-﻿@namespace presentation.Components.Search
+﻿@namespace presentation.Components.Custom
 @using shared.Models
 @using infrastructure.ItemTrackerApi
 @using presentation.Authentication
-@using Throw
 @inject CognitoAuthenticationStateProvider AuthenticationStateProvider
 @inject ItemTrackerApiService ItemTrackerApiService
 
@@ -20,18 +19,9 @@
 
 @code {
     private readonly List<ItemSearchResponse> _itemSearchResponses = new();
-    private string? _accessToken = null;
     private string? _searchBoxContent = "";
 
-    protected override async Task OnInitializedAsync()
-    {
-        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var accessToken = authenticationState.User.Claims.AccessToken();
-        accessToken.ThrowIfNull().IfEmpty().IfWhiteSpace();
-        _accessToken = accessToken;
-    }
-
-    private volatile bool _backgroundTaskRunning = false;
+    private volatile bool _backgroundTaskRunning;
     private DateTime _lastInput;
 
     private void StartBackgroundTask()
@@ -50,11 +40,6 @@
                 while (true)
                 {
                     await Task.Delay(50);
-                    if (string.IsNullOrWhiteSpace(_accessToken))
-                    {
-                        throw new Exception("No access token set");
-                    }
-
                     var timeSinceLastInput = DateTime.Now - _lastInput;
                     Console.WriteLine(nameof(timeSinceLastInput) + ": " + timeSinceLastInput);
                     if (timeSinceLastInput.TotalMilliseconds > 1000)
@@ -64,7 +49,12 @@
                             break;
                         }
 
-                        var searchResult = await ItemTrackerApiService.Search(_searchBoxContent, _accessToken);
+                        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+                        if (string.IsNullOrWhiteSpace(accessToken))
+                        {
+                            throw new Exception("No access token set");
+                        }
+                        var searchResult = await ItemTrackerApiService.Search(_searchBoxContent, accessToken);
                         if (searchResult.IsError)
                         {
                             throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
@@ -83,7 +73,7 @@
         });
     }
 
-    private async Task OnInput(ChangeEventArgs obj)
+    private void OnInput(ChangeEventArgs obj)
     {
         var searchText = obj.Value?.ToString()?.Trim();
         _searchBoxContent = searchText;

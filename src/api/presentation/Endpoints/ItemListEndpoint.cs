@@ -1,4 +1,5 @@
 ﻿using application.Commands;
+using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using shared.Models;
 
@@ -46,34 +47,14 @@ public static class ItemListEndpoint
                 return Results.Extensions.Unauthorized(errorString);
             }
 
+            
             var newList = await listCommandService.New(userId.Value, newListModel);
             return newList.IsError
                 ? Results.Extensions.InternalServerError(newList.FirstError.Description)
-                : Results.Ok(newList);
+                : Results.Text(newList.Value.Url);
         });
 
-        group.MapGet("{url}", async (
-            ILogger<Program> logger,
-            HttpContext context,
-            ListCommandService listCommandService,
-            string url) =>
-        {
-            var userId = context.User.Id();
-            if (userId.IsError)
-            {
-                var publicListResponse = await listCommandService.GetPublic(url);
-                return publicListResponse.IsError
-                    ? Results.Extensions.InternalServerError(publicListResponse.FirstError.Description)
-                    : Results.Ok(publicListResponse.Value);
-            }
-
-            var listResponse = await listCommandService.Get(userId.Value, url);
-            return listResponse.IsError
-                ? Results.Extensions.InternalServerError(listResponse.FirstError.Description)
-                : Results.Ok(listResponse.Value);
-        }).AllowAnonymous();
-
-        group.MapPost("{url}/delete", async (
+        group.MapDelete("{url}/delete", async (
             ILogger<Program> logger,
             HttpContext context,
             ListCommandService listCommandService,
@@ -92,6 +73,28 @@ public static class ItemListEndpoint
                 ? Results.Extensions.InternalServerError(delete.FirstError.Description)
                 : Results.Ok();
         });
+        
+        group.MapGet("{url}", async (
+            ILogger<Program> logger,
+            HttpContext context,
+            ListCommandService listCommandService,
+            string url) =>
+        {
+            var userId = context.User.Id();
+            var listResponse = await listCommandService.Get(
+                userId.IsError
+                    ? null
+                    : userId.Value, url
+            );
+            if (listResponse.IsError)
+            {
+                return listResponse.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(listResponse.FirstError.Description)
+                    : Results.Extensions.InternalServerError(listResponse.FirstError.Description);
+            }
+
+            return Results.Ok(listResponse.Value);
+        }).AllowAnonymous();
 
         group.MapPost("{url}/buy-item", async (
             ILogger<Program> logger,

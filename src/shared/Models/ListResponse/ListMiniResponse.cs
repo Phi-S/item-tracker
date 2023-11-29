@@ -1,4 +1,4 @@
-﻿namespace shared.Models;
+﻿namespace shared.Models.ListResponse;
 
 public record ListMiniResponse(
     string Name,

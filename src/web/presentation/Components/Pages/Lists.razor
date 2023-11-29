@@ -1,100 +1,47 @@
 ﻿@page "/lists"
-@using shared.Models
-@using infrastructure.ItemTrackerApi
 @using Microsoft.AspNetCore.Authorization
-@using presentation.Authentication
-@using Throw
-@inject ItemTrackerApiService ItemTrackerApiService
-@inject CognitoAuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager NavigationManager 
+@inherits ListsRazor
 
 @attribute [Authorize]
 
-<button @onclick="OpenNewListModal">Open</button>
+<ErrorComponent @ref="ErrorComponentRef">
 
-<Modal @ref="NewListModal" Title="Create new list" OkButtonString="Create list" OpenModalButtonText="+" OkButtonAction="NewList">
-    <ChildContent>
-        <div class="mb-2">
-            <input @bind="_newListModel.ListName" class="form-control" type="text" placeholder="List name">
-        </div>
-        <div class="mb-2">
-            <input @bind="_newListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
-        </div>
-        <div class="form-floating mb-2">
-            <select @bind="_newListModel.Currency" id="currencySelect" class="form-select">
-                <option selected value="EUR">€</option>
-                <option value="USD">$</option>
-            </select>
-            <label for="currencySelect">Currency</label>
-        </div>
-        <div class="mb-3">
-            <input @bind="_newListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
-            <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
-        </div>
-    </ChildContent>
-</Modal>
+    <button class="btn btn-info w-100" @onclick="OpenNewListModal">Create new list</button>
 
+    <Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OpenModalButtonText="+" OkButtonAction="NewList">
+        <ChildContent>
+            <div class="mb-2">
+                <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
+            </div>
+            <div class="mb-2">
+                <input @bind="NewListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
+            </div>
+            <div class="form-floating mb-2">
+                <select @bind="NewListModel.Currency" id="currencySelect" class="form-select">
+                    <option selected value="EUR">€</option>
+                    <option value="USD">$</option>
+                </select>
+                <label for="currencySelect">Currency</label>
+            </div>
+            <div class="mb-3">
+                <input @bind="NewListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
+                <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
+            </div>
+        </ChildContent>
+    </Modal>
 
-@if (_lists is null)
-{
-    <Loading/>
-}
-else
-{
-    foreach (var list in _lists)
+    @if (Lists is null)
     {
-        <button @onclick="() => NavigateToList(list.Url)">@list.Name</button>
-        <button class="btn-close"></button>
+        <Loading/>
     }
-}
-
-@code
-{
-    private List<ListMiniResponse>? _lists;
-
-    Modal? NewListModal { get; set; }
-    private NewListModel _newListModel = new();
-
-    protected override async Task OnInitializedAsync()
+    else
     {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        accessToken.ThrowIfNull().IfEmpty().IfWhiteSpace();
-
-
-        var list = await ItemTrackerApiService.All(accessToken);
-        if (list.IsError)
+        foreach (var list in Lists)
         {
-            throw new Exception(list.FirstError.Description);
-        }
-
-        _lists = list.Value;
-    }
-
-    private void NavigateToList(string listUrl)
-    {
-        NavigationManager.NavigateTo($"/list/{listUrl}");
-    }
-
-    private async Task NewList()
-    {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            throw new Exception("Access token is not set. This should not happen");
-        }
-
-        Console.WriteLine(_newListModel);
-
-        var newList = await ItemTrackerApiService.NewList(accessToken, _newListModel);
-        if (newList.IsError == false)
-        {
-            _newListModel = new NewListModel();
-            NavigateToList(newList.Value.Url);
+            <div class="container">
+                <button class="btn" @onclick="() => NavigateToList(list.Url)">@list.Name</button>
+                <button class="btn-close" @onclick="() => DeleteList(list.Url)"></button>
+            </div>
         }
     }
-
-    private void OpenNewListModal()
-    {
-        NewListModal?.Open();
-    }
-}
+</ErrorComponent>

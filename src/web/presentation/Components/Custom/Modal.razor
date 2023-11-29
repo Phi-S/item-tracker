@@ -38,6 +38,15 @@
     protected string ModalDisplay = "none;";
     protected string ModalClass = "";
 
+    public Modal()
+    {
+        OkButtonAction = () =>
+        {
+            Close();
+            return Task.CompletedTask;
+        };
+    }
+
     public void Open()
     {
         ModalDisplay = "block;";
@@ -45,7 +54,7 @@
         StateHasChanged();
     }
 
-    protected void Close()
+    public void Close()
     {
         ModalDisplay = "none";
         ModalClass = "";

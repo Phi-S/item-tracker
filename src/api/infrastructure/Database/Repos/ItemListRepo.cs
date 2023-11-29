@@ -5,15 +5,20 @@ namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
+    public async Task<bool> ExistsWithNameForUser(string userId, string listName)
+    {
+        return await dbContext.ItemLists.AnyAsync(list => list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
+    }
+    
     public async Task<ItemListDbModel> GetByUrl(string url)
     {
         return await dbContext.ItemLists.FirstAsync(list => list.Deleted == false && list.Url.Equals(url));
     }
 
-    public Task<IEnumerable<ItemListDbModel>> GetAllForUserSub(string userSub)
+    public Task<IEnumerable<ItemListDbModel>> GetAllForUserSub(string userId)
     {
         return Task.FromResult<IEnumerable<ItemListDbModel>>(dbContext.ItemLists.Where(list =>
-            list.Deleted == false && list.UserId.Equals(userSub)));
+            list.Deleted == false && list.UserId.Equals(userId)));
     }
 
     public async Task<bool> ListNameExists(string userId, string listName)
@@ -44,7 +49,7 @@ public class ItemListRepo(XDbContext dbContext)
             CreatedUtc = currentDateTimeUtc
         });
         await dbContext.SaveChangesAsync();
-        return itemList.Entity;
+        return dbContext.ItemLists.First(list => list.Url.Equals(url));
     }
 
     public async Task Delete(long listId)

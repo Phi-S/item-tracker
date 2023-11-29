@@ -1,10 +1,12 @@
-﻿using ErrorOr;
+﻿using System.Runtime.InteropServices.JavaScript;
+using ErrorOr;
 using infrastructure.Currencies;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
 using infrastructure.Items;
 using infrastructure.Mapper;
 using shared.Models;
+using shared.Models.ListResponse;
 
 namespace application.Commands;
 
@@ -42,7 +44,11 @@ public class ListCommandService
             return Error.Conflict(description: $"Currency \"{newListModel.Currency}\" is not a valid currency");
         }
 
-        // TODO: check if list name is already used by user
+        var existingListWithName = await _itemListRepo.ExistsWithNameForUser(userId, newListModel.ListName);
+        if (existingListWithName)
+        {
+            return Error.Conflict(description: $"List with the name \"{newListModel.ListName}\" already exist");
+        }
 
         var list = await _itemListRepo.New(
             userId,
@@ -61,24 +67,10 @@ public class ListCommandService
         return listResponse;
     }
 
-    public async Task<ErrorOr<ListResponse>> Get(string userId, string listUrl)
+    public async Task<ErrorOr<ListResponse>> Get(string? userId, string listUrl)
     {
         var list = await _itemListRepo.GetByUrl(listUrl);
-        if (list.UserId.Equals(userId) == false)
-        {
-            return Error.Unauthorized(description: "You dont have access to this list");
-        }
-
-        var listValues = await _itemListValueRepo.GetAll(list);
-        var items = await _itemListItemRepo.GetItemsForList(list);
-        var listResponse = ItemListMapper.MapToListResponse(list, listValues, items, _itemsService);
-        return listResponse;
-    }
-
-    public async Task<ErrorOr<ListResponse>> GetPublic(string listUrl)
-    {
-        var list = await _itemListRepo.GetByUrl(listUrl);
-        if (list.Public == false)
+        if (list.Public == false && list.UserId.Equals(userId) == false)
         {
             return Error.Unauthorized(description: "You dont have access to this list");
         }

@@ -1,0 +1,27 @@
+﻿@if (IsError)
+{
+    <div class="alert alert-danger" role="alert">
+        @ErrorMessage
+    </div>
+}
+else
+{
+    @ChildContent
+}
+
+@code
+{
+    [Parameter]
+    [EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
+
+    private bool IsError { get; set; }
+    private string ErrorMessage { get; set; } = "An Error has occured";
+
+    public void SetError(string errorMessage)
+    {
+        ErrorMessage = errorMessage;
+        IsError = true;
+        StateHasChanged();
+    }
+}

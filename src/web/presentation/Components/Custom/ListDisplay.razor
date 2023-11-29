@@ -1,0 +1,18 @@
+﻿@using shared.Models
+@using application.Helper
+@using shared.Models.ListResponse
+
+<div class="container w-100 row" style="height: 30px">
+    <span class="col-3">@ListResponse.Name</span>
+    <span class="col-2">@CurrencyHelper.FormatCurrency(ListResponse.Currency, LatestListValue.Value)</span>
+    <span></span>
+</div>
+
+@code
+{
+    [Parameter]
+    [EditorRequired]
+    public ListResponse ListResponse { get; set; } = null!;
+
+    private ListValueResponse LatestListValue => ListResponseHelper.GetLatestListValue(ListResponse);
+}
