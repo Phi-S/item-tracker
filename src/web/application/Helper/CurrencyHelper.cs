@@ -19,6 +19,7 @@ public static class CurrencyHelper
 
     public static string FormatCurrency(string currencyString, decimal value)
     {
+        value = Math.Round(value, 2);
         if (currencyString.Equals("EUR"))
         {
             return $"{value}€";

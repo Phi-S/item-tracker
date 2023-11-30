@@ -12,7 +12,7 @@ using infrastructure.Database;
 namespace infrastructure.Database.Migrations
 {
     [DbContext(typeof(XDbContext))]
-    [Migration("20231122080731_InitialCreate")]
+    [Migration("20231129234634_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -119,13 +119,16 @@ namespace infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<decimal?>("BuffValue")
+                        .HasColumnType("numeric");
+
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("ItemListDbModelId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal>("Value")
+                    b.Property<decimal?>("SteamValue")
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");

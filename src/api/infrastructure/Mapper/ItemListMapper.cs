@@ -37,7 +37,11 @@ public static class ItemListMapper
         var listValues = new List<ListValueResponse>();
         foreach (var itemListValue in itemListValues)
         {
-            var listValue = new ListValueResponse(itemListValue.Value, itemListValue.CreatedUtc);
+            var listValue = new ListValueResponse(
+                itemListValue.SteamValue,
+                itemListValue.BuffValue,
+                itemListValue.CreatedUtc
+            );
             listValues.Add(listValue);
         }
 
@@ -45,7 +49,7 @@ public static class ItemListMapper
             itemListDbModel.Name,
             itemListDbModel.Description,
             itemListDbModel.Url,
-            itemListDbModel.Currency.ToString(),
+            itemListDbModel.Currency,
             itemListDbModel.Public,
             items,
             listValues);

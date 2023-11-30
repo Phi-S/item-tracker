@@ -2,7 +2,6 @@
 
 namespace shared.Models;
 
-[JsonSerializable(typeof(NewListModel))]
 public class NewListModel
 {
     public string ListName { get; set; } = "";
@@ -12,6 +11,7 @@ public class NewListModel
 
     public override string ToString()
     {
-        return $"{nameof(ListName)}: {ListName}, {nameof(ListDescription)}: {ListDescription}, {nameof(Currency)}: {Currency}, {nameof(Public)}: {Public}";
+        return
+            $"{nameof(ListName)}: {ListName}, {nameof(ListDescription)}: {ListDescription}, {nameof(Currency)}: {Currency}, {nameof(Public)}: {Public}";
     }
 }

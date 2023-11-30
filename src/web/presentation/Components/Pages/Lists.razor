@@ -36,10 +36,12 @@
         }
         else
         {
-            <div class="container w-100">
+            <div class="container">
                 @foreach (var list in Lists)
                 {
-                    <ListDisplay List="list"/>
+                    <div style="height: 10rem">
+                        <ListDisplay List="list"/>
+                    </div>
                 }
             </div>
         }

@@ -82,7 +82,8 @@ namespace infrastructure.Database.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ItemListDbModelId = table.Column<long>(type: "bigint", nullable: false),
-                    Value = table.Column<decimal>(type: "numeric", nullable: false),
+                    SteamValue = table.Column<decimal>(type: "numeric", nullable: true),
+                    BuffValue = table.Column<decimal>(type: "numeric", nullable: true),
                     CreatedUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>

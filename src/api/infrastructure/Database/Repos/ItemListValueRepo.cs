@@ -10,8 +10,9 @@ public class ItemListValueRepo(XDbContext dbContext)
         return await dbContext.ItemListValues.Where(value => value.ItemListDbModel.Id == listDbModel.Id).ToListAsync();
     }
 
-    public async Task<ItemListValueDbModel> Add(ItemListValueDbModel itemListValueDbModel)
+    public async Task Add(ItemListValueDbModel itemListValueDbModel)
     {
-        return (await dbContext.ItemListValues.AddAsync(itemListValueDbModel)).Entity;
+        await dbContext.ItemListValues.AddAsync(itemListValueDbModel);
+        await dbContext.SaveChangesAsync();
     }
 }

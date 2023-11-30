@@ -13,7 +13,7 @@ public class ItemListServiceTest(ITestOutputHelper output)
         if (res.IsError)
         {
             output.WriteLine(res.FirstError.ToString());
-            Assert.Fail(res.FirstError.ToString() ?? string.Empty);
+            Assert.Fail(res.FirstError.Description);
         }
 
         output.WriteLine($"{res.Value.Count} items found");
@@ -30,7 +30,7 @@ public class ItemListServiceTest(ITestOutputHelper output)
             Assert.Fail(search.FirstError.Description);
         }
 
-        output.WriteLine($"search result:\n {string.Join("\n", search.Value.Select(model => model.Name))}");
+        output.WriteLine($"search result:\n{string.Join("\n", search.Value.Select(model => model.Name))}");
         Assert.True(search.Value.Count != 0);
     }
 }

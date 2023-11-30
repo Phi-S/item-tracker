@@ -12,8 +12,7 @@ public class ItemListRepo(XDbContext dbContext)
         IEnumerable<ItemListItemActionDbModel> Items
     );
 
-    public List<Tuple<ItemListDbModel, List<ItemListValueDbModel>, List<ItemListItemActionDbModel>>> All(
-        string userId)
+    public List<Tuple<ItemListDbModel, List<ItemListValueDbModel>, List<ItemListItemActionDbModel>>> All(string userId)
     {
         var result =
             dbContext.ItemLists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
@@ -22,6 +21,12 @@ public class ItemListRepo(XDbContext dbContext)
                     dbContext.ItemListValues.Where(value => value.ItemListDbModel.Id == list.Id).ToList(),
                     dbContext.ItemListItemAction.Where(item => item.ItemListDbModel.Id == list.Id).ToList()
                 )).ToList();
+        return result;
+    }
+    
+    public IEnumerable<ItemListDbModel> All()
+    {
+        var result = dbContext.ItemLists.ToList();
         return result;
     }
 
