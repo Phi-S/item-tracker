@@ -1,93 +1,33 @@
 ﻿@namespace presentation.Components.Custom
-@using shared.Models
-@using infrastructure.ItemTrackerApi
 @using Microsoft.AspNetCore.Authorization
-@using presentation.Authentication
-@inject CognitoAuthenticationStateProvider AuthenticationStateProvider
-@inject ItemTrackerApiService ItemTrackerApiService
+@inherits SearchComponentRazor
 
 @attribute [Authorize]
 
-<input class="form-control" placeholder="Type to search item..." @oninput="OnInput">
-<div class="position-absolute" style="z-index: 500; max-height: 100px; height: 100px">
-    @foreach (var searchResult in _itemSearchResponses)
-    {
-        <div>
-            <button @onclick="() => OnItemSelected.Invoke(searchResult.Id)">
-                <img style="width: 70px" src="@searchResult.Image"/>
-                @searchResult.Name
-            </button>
-        </div>
+<style>
+    .test {
+        z-index: 1100;
+        overflow-y: scroll;
+        overflow-x: hidden;
+        scrollbar-color: darkgrey #212529;
+        max-height: 20rem;
+        height: 20rem;
+        max-width: 30rem;
+        width: 30rem;
     }
-</div>
+</style>
 
-
-@code {
-
-    [Parameter]
-    [EditorRequired]
-    public Func<long, Task> OnItemSelected { get; set; } = null!;
-    
-    private readonly List<ItemSearchResponse> _itemSearchResponses = new();
-    private string? _searchBoxContent = "";
-
-    private volatile bool _backgroundTaskRunning;
-    private DateTime _lastInput;
-
-    private void StartBackgroundTask()
-    {
-        _lastInput = DateTime.Now;
-        if (_backgroundTaskRunning)
+<div class="w-100">
+    <input class="form-control mb-2" placeholder="Type to search item..." @bind="CurrentSearchBoxContent" @oninput="OnInput" @onfocusin="ShowSearchResponses" @onfocusout="@HideSearchResponses">
+    <div @ref="SearchResponsesDivRef" class="position-fixed border border-2 border-light test @HideSearchResponsesClass">
+        @foreach (var searchResult in ItemSearchResponses)
         {
-            return;
+            <div class="row">
+                <button @onclick="() => OnSelect(searchResult)">
+                    <img style="width: 70px" src="@searchResult.Image" alt=""/>
+                    @searchResult.Name
+                </button>
+            </div>
         }
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                _backgroundTaskRunning = true;
-                while (true)
-                {
-                    await Task.Delay(50);
-                    var timeSinceLastInput = DateTime.Now - _lastInput;
-                    Console.WriteLine(nameof(timeSinceLastInput) + ": " + timeSinceLastInput);
-                    if (timeSinceLastInput.TotalMilliseconds > 1000)
-                    {
-                        if (string.IsNullOrWhiteSpace(_searchBoxContent) || _searchBoxContent.Length < 3)
-                        {
-                            break;
-                        }
-
-                        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-                        if (string.IsNullOrWhiteSpace(accessToken))
-                        {
-                            throw new Exception("No access token set");
-                        }
-                        var searchResult = await ItemTrackerApiService.Search(_searchBoxContent, accessToken);
-                        if (searchResult.IsError)
-                        {
-                            throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
-                        }
-                        _itemSearchResponses.Clear();
-                        _itemSearchResponses.AddRange(searchResult.Value);
-                        StateHasChanged();
-                        break;
-                    }
-                }
-            }
-            finally
-            {
-                _backgroundTaskRunning = false;
-            }
-        });
-    }
-
-    private void OnInput(ChangeEventArgs obj)
-    {
-        var searchText = obj.Value?.ToString()?.Trim();
-        _searchBoxContent = searchText;
-        StartBackgroundTask();
-    }
-}
-
+    </div>
+</div>

@@ -10,5 +10,5 @@ public class ItemPriceDbModel
     public decimal? SteamPriceEur { get; set; }
     public decimal? BuffPriceUsd { get; set; }
     public decimal? BuffPriceEur { get; set; }
-    [Required] public required DateTime CreatedUtc { get; set; }
+    [Required] public required ItemPriceRefreshDbModel ItemPriceRefresh { get; set; }
 }

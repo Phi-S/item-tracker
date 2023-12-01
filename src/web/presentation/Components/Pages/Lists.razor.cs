@@ -1,5 +1,4 @@
-﻿using ApexCharts;
-using infrastructure.ItemTrackerApi;
+﻿using infrastructure.ItemTrackerApi;
 using Microsoft.AspNetCore.Components;
 using presentation.Authentication;
 using presentation.Components.Custom;

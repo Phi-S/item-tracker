@@ -1,5 +1,6 @@
 ﻿@using application.Helper
 @using shared.Models.ListResponse
+@using BlazorBootstrap
 @inherits ListDisplayRazor
 
 <div class="row align-items-center h-100 border-2 border mt-2 ms-0 me-0 p-0">
@@ -11,21 +12,9 @@
         </div>
     </button>
     <span class="col-1">@ListResponseHelper.GetCurrentValue(List)</span>
+    
     <div class="col-8 h-100">
-        <ApexChart
-            TItem="ListValueResponse"
-            Options="ApexChartOptions"
-            Title="" Width="@("100%")"
-            Height="@("100%")">
-            <ApexPointSeries Items="List.ListValues"
-                             SeriesType="SeriesType.Line"
-                             Name="@Name"
-                             XValue="@(e => e.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"))"
-                             ShowDataLabels="false"
-                             YValue="@(e => Math.Round(e.SteamValue ?? 0, 2))"
-                             OrderBy="e => e.X">
-            </ApexPointSeries>
-        </ApexChart>
+        <LineChart @ref="LineChart" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
     </div>
     <div class="col-1 text-center">
         <button class="btn btn-close" @onclick="() => DeleteList(List.Url)"></button>

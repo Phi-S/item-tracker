@@ -26,4 +26,8 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\api\infrastructure\infrastructure.csproj" />
+    </ItemGroup>
+
 </Project>

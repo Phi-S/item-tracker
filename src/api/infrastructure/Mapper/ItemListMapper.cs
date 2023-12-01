@@ -51,6 +51,7 @@ public static class ItemListMapper
             itemListDbModel.Url,
             itemListDbModel.Currency,
             itemListDbModel.Public,
+            itemListDbModel.UserId,
             items,
             listValues);
 

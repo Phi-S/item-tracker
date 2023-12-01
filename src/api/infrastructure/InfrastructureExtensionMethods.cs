@@ -13,6 +13,7 @@ public static class InfrastructureExtensionMethods
     public static IServiceCollection AddInfrastructure(this IServiceCollection serviceCollection)
     {
         #region Database
+
         serviceCollection.AddDbContext<XDbContext>();
 
         // Migrate database
@@ -25,7 +26,6 @@ public static class InfrastructureExtensionMethods
         }
 
         serviceCollection.AddScoped<ItemListRepo>();
-        serviceCollection.AddScoped<ItemListItemRepo>();
         serviceCollection.AddScoped<ItemListValueRepo>();
         serviceCollection.AddScoped<ItemPriceRepo>();
 

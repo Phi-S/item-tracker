@@ -14,8 +14,12 @@ public class ListRazor : ComponentBase
 
     [Parameter, EditorRequired] public string ListUrl { get; set; } = null!;
 
+    protected Modal? ModalRef { get; set; }
     protected ErrorComponent ErrorComponentRef = null!;
-    protected ListResponse? ListResponse;
+    protected ListResponse? List;
+    private long? _addEntrySelectedItemId;
+    protected decimal? AddEntryPrice;
+    protected long? AddEntryAmount;
 
     protected override async Task OnInitializedAsync()
     {
@@ -27,13 +31,97 @@ public class ListRazor : ComponentBase
             return;
         }
 
-        ListResponse = list.Value;
+        List = list.Value;
     }
 
-    protected async Task BuyItem(long itemId)
+    protected Task AddEntryOnItemSelected(long itemId)
     {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        await ItemTrackerApiService.BuyItem(accessToken, ListUrl, itemId, 5, 2);
-        NavigationManager.Refresh();
+        _addEntrySelectedItemId = itemId;
+        AddEntryAmount = 1;
+        AddEntryPrice = 0;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    protected void OpenModalBuyEntry()
+    {
+        OpenNewEntryModal(true);
+    }
+
+    protected void OpenModalSellEntry()
+    {
+        OpenNewEntryModal(false);
+
+    }
+
+    protected void OpenNewEntryModal(bool buySell)
+    {
+        if (ModalRef is null)
+        {
+            return;
+        }
+
+        var buySellString = buySell ? "buy" : "sell";
+        ModalRef.Title = $"Add {buySellString} entry";
+        ModalRef.OkButtonString = ModalRef.Title;
+        ModalRef.OkButtonAction = async () =>
+        {
+            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                throw new Exception("Failed to add entry. No access token found");
+            }
+
+            if (_addEntrySelectedItemId is null)
+            {
+                throw new Exception("Failed to add entry. No item selected");
+            }
+
+            if (AddEntryPrice is null)
+            {
+                throw new Exception("Failed to add entry. No price entered");
+            }
+
+            if (AddEntryAmount is null)
+            {
+                throw new Exception("Failed to add entry. No amount entered");
+            }
+
+            if (buySell)
+            {
+                var buyItem = await ItemTrackerApiService.BuyItem(
+                    accessToken,
+                    ListUrl,
+                    _addEntrySelectedItemId.Value,
+                    AddEntryPrice.Value,
+                    AddEntryAmount.Value
+                );
+                if (buyItem.IsError)
+                {
+                    throw new Exception($"Failed to add entry. {buyItem.FirstError.Description}");
+                }
+            }
+            else
+            {
+                var sellItem = await ItemTrackerApiService.SellItem(
+                    accessToken,
+                    ListUrl,
+                    _addEntrySelectedItemId.Value,
+                    AddEntryPrice.Value,
+                    AddEntryAmount.Value
+                );
+                if (sellItem.IsError)
+                {
+                    throw new Exception($"Failed to add entry. {sellItem.FirstError.Description}");
+                }
+            }
+        };
+
+        ModalRef.Open();
+    }
+
+    protected async Task Delete(ListItemResponse item)
+    {
+        // TODO: implement delete...
     }
 }

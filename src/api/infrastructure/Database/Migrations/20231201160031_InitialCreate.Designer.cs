@@ -12,7 +12,7 @@ using infrastructure.Database;
 namespace infrastructure.Database.Migrations
 {
     [DbContext(typeof(XDbContext))]
-    [Migration("20231129234634_InitialCreate")]
+    [Migration("20231201160031_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -98,7 +98,7 @@ namespace infrastructure.Database.Migrations
                     b.Property<long>("ItemId")
                         .HasColumnType("bigint");
 
-                    b.Property<long>("ItemListDbModelId")
+                    b.Property<long>("ListId")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("PricePerOne")
@@ -106,7 +106,7 @@ namespace infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ItemListDbModelId");
+                    b.HasIndex("ListId");
 
                     b.ToTable("ItemListItemAction");
                 });
@@ -125,7 +125,10 @@ namespace infrastructure.Database.Migrations
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<long>("ItemListDbModelId")
+                    b.Property<long?>("ItemPriceRefreshId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ListId")
                         .HasColumnType("bigint");
 
                     b.Property<decimal?>("SteamValue")
@@ -133,7 +136,9 @@ namespace infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ItemListDbModelId");
+                    b.HasIndex("ItemPriceRefreshId");
+
+                    b.HasIndex("ListId");
 
                     b.ToTable("ItemListValues");
                 });
@@ -152,10 +157,10 @@ namespace infrastructure.Database.Migrations
                     b.Property<decimal?>("BuffPriceUsd")
                         .HasColumnType("numeric");
 
-                    b.Property<DateTime>("CreatedUtc")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<long>("ItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ItemPriceRefreshId")
                         .HasColumnType("bigint");
 
                     b.Property<decimal?>("SteamPriceEur")
@@ -166,29 +171,64 @@ namespace infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ItemPriceRefreshId");
+
                     b.ToTable("ItemPrices");
+                });
+
+            modelBuilder.Entity("infrastructure.Database.Models.ItemPriceRefreshDbModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ItemPriceRefresh");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemListItemActionDbModel", b =>
                 {
-                    b.HasOne("infrastructure.Database.Models.ItemListDbModel", "ItemListDbModel")
+                    b.HasOne("infrastructure.Database.Models.ItemListDbModel", "List")
                         .WithMany()
-                        .HasForeignKey("ItemListDbModelId")
+                        .HasForeignKey("ListId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ItemListDbModel");
+                    b.Navigation("List");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemListValueDbModel", b =>
                 {
-                    b.HasOne("infrastructure.Database.Models.ItemListDbModel", "ItemListDbModel")
+                    b.HasOne("infrastructure.Database.Models.ItemPriceRefreshDbModel", "ItemPriceRefresh")
                         .WithMany()
-                        .HasForeignKey("ItemListDbModelId")
+                        .HasForeignKey("ItemPriceRefreshId");
+
+                    b.HasOne("infrastructure.Database.Models.ItemListDbModel", "List")
+                        .WithMany()
+                        .HasForeignKey("ListId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("ItemListDbModel");
+                    b.Navigation("ItemPriceRefresh");
+
+                    b.Navigation("List");
+                });
+
+            modelBuilder.Entity("infrastructure.Database.Models.ItemPriceDbModel", b =>
+                {
+                    b.HasOne("infrastructure.Database.Models.ItemPriceRefreshDbModel", "ItemPriceRefresh")
+                        .WithMany()
+                        .HasForeignKey("ItemPriceRefreshId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ItemPriceRefresh");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,35 +1,70 @@
 ﻿@page "/list/{ListUrl}"
 @using application.Helper
+@using presentation.Authentication
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
-    @if (ListResponse is null)
+    @if (List is null)
     {
         <h1>loading...</h1>
     }
     else
     {
         <div class="pb-2" style="height: 10rem">
-            <ListDisplay List="ListResponse"/>
+            <ListDisplay List="List"/>
         </div>
         <AuthorizeView>
             <Authorized>
                 <div class="input-group">
-                    <div class="col-10">
-                        <SearchComponent OnItemSelected="BuyItem"></SearchComponent>
-                    </div>
-                    <button class="btn btn-info form-control">Add entry</button>
+                    <button class="btn btn-success w-50" @onclick="OpenModalBuyEntry">Add Buy entry</button>
+                    <button class="btn btn-danger w-50" @onclick="OpenModalSellEntry">Add Sell entry</button>
                 </div>
+
+                @if (context.User.Claims.UserId().Equals(List.UserId))
+                {
+                    <div class="w-100">
+                        <Modal @ref="ModalRef">
+                            <div class="input-group w-100">
+                                <SearchComponent OnItemSelected="AddEntryOnItemSelected"></SearchComponent>
+                            </div>
+                            <div class="input-group w-100 text-nowrap flex-nowrap pb-2">
+                                <div class="input-group-text">
+                                    Amount
+                                </div>
+                                <input class="form-control" type="text" @bind="AddEntryAmount"/>
+                            </div>
+                            <div class="input-group w-100 text-nowrap flex-nowrap">
+                                <div class="input-group-text">
+                                    Price for one
+                                </div>
+                                @if (List.Currency.Equals("USD"))
+                                {
+                                    <div class="input-group-text">
+                                        $
+                                    </div>
+                                }
+                                <input class="form-control" type="text" @bind="AddEntryPrice"/>
+                                @if (List.Currency.Equals("EUR"))
+                                {
+                                    <div class="input-group-text">
+                                        €
+                                    </div>
+                                }
+                            </div>
+                        </Modal>
+                    </div>
+                }
             </Authorized>
         </AuthorizeView>
 
         <div class="container">
-            @foreach (var item in ListResponse.Items)
+            @foreach (var item in List.Items)
             {
                 <div>
                     <img src="@item.ItemImage" alt="" style="height: 50px"/>
                     <span>@item.ItemName</span>
-                    <span>@item.PricePerOne x @CurrencyHelper.FormatCurrency(ListResponse.Currency, item.PricePerOne)</span>
+                    <span>@item.Amount x @CurrencyHelper.FormatCurrency(List.Currency, item.PricePerOne)</span>
+                    <button class="btn btn-close" @onclick="() => Delete(item)"></button>
                 </div>
             }
         </div>

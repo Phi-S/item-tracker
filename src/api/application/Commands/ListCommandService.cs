@@ -12,18 +12,15 @@ namespace application.Commands;
 public class ListCommandService
 {
     private readonly ItemListRepo _itemListRepo;
-    private readonly ItemListItemRepo _itemListItemRepo;
     private readonly ItemListValueRepo _itemListValueRepo;
     private readonly ItemsService _itemsService;
 
     public ListCommandService(
         ItemListRepo itemListRepo,
-        ItemListItemRepo itemListItemRepo,
         ItemListValueRepo itemListValueRepo,
         ItemsService itemsService)
     {
         _itemListRepo = itemListRepo;
-        _itemListItemRepo = itemListItemRepo;
         _itemListValueRepo = itemListValueRepo;
         _itemsService = itemsService;
     }
@@ -36,7 +33,7 @@ public class ListCommandService
             return Error.Unauthorized("UserId not found");
         }
 
-        var lists = _itemListRepo.All(userId);
+        var lists = await _itemListRepo.GetListInfosForUserId(userId);
         var result = new List<ListResponse>();
         foreach (var (list, values, items) in lists)
         {
@@ -97,9 +94,12 @@ public class ListCommandService
             return Error.Unauthorized(description: "You dont have access to this list");
         }
 
-        var listValues = await _itemListValueRepo.GetAll(list);
-        var items = await _itemListItemRepo.GetItemsForList(list);
-        var listResponse = ItemListMapper.MapToListResponse(list, listValues, items, _itemsService);
+        var listInfos = _itemListRepo.GetListInfos(listUrl);
+        var listResponse = ItemListMapper.MapToListResponse(
+            listInfos.list,
+            listInfos.listValues,
+            listInfos.items,
+            _itemsService);
         return listResponse;
     }
 
@@ -138,7 +138,8 @@ public class ListCommandService
             return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
-        await _itemListItemRepo.Buy(list, itemId, price, amount);
+        await _itemListRepo.BuyItem(list, itemId, price, amount);
+        await _itemListValueRepo.CalculateLatest(list);
         return Result.Created;
     }
 
@@ -160,7 +161,8 @@ public class ListCommandService
             return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
-        await _itemListItemRepo.Sell(list, itemId, price, amount);
+        await _itemListRepo.SellItem(list, itemId, price, amount);
+        await _itemListValueRepo.CalculateLatest(list);
         return Result.Created;
     }
 
@@ -177,13 +179,8 @@ public class ListCommandService
             return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
-        var itemsInList = await _itemListItemRepo.GetItemsForList(list);
-        if (itemsInList.Any(action => action.Id == itemActionId) == false)
-        {
-            return Error.Failure($"Item action with the id {itemActionId} is not in list");
-        }
-
-        await _itemListItemRepo.DeleteItemAction(itemActionId);
+        await _itemListRepo.DeleteItem(itemActionId);
+        await _itemListValueRepo.CalculateLatest(list);
         return Result.Deleted;
     }
 }

@@ -1,33 +1,35 @@
 ﻿using infrastructure.Database.Models;
 using Microsoft.EntityFrameworkCore;
-using shared.Models.ListResponse;
 
 namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
-    public record AllResult(
-        ItemListDbModel List,
-        IEnumerable<ItemListValueDbModel> Values,
-        IEnumerable<ItemListItemActionDbModel> Items
-    );
-
-    public List<Tuple<ItemListDbModel, List<ItemListValueDbModel>, List<ItemListItemActionDbModel>>> All(string userId)
+    public async Task<List<Tuple<ItemListDbModel, List<ItemListValueDbModel>, List<ItemListItemActionDbModel>>>>
+        GetListInfosForUserId(string userId)
     {
         var result =
             dbContext.ItemLists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
                 .Select(list => Tuple.Create(
                     list,
-                    dbContext.ItemListValues.Where(value => value.ItemListDbModel.Id == list.Id).ToList(),
-                    dbContext.ItemListItemAction.Where(item => item.ItemListDbModel.Id == list.Id).ToList()
+                    dbContext.ItemListValues.Where(value => value.List.Id == list.Id).ToList(),
+                    dbContext.ItemListItemAction.Where(item => item.List.Id == list.Id).ToList()
                 )).ToList();
-        return result;
+        return await Task.FromResult(result);
     }
-    
-    public IEnumerable<ItemListDbModel> All()
+
+    public (ItemListDbModel list, List<ItemListValueDbModel> listValues, List<ItemListItemActionDbModel> items)
+        GetListInfos(
+            string listUrl)
     {
-        var result = dbContext.ItemLists.ToList();
-        return result;
+        var result =
+            dbContext.ItemLists.Where(list => list.Deleted == false && list.Url.Equals(listUrl))
+                .Select(list => Tuple.Create(
+                    list,
+                    dbContext.ItemListValues.Where(value => value.List.Id == list.Id).ToList(),
+                    dbContext.ItemListItemAction.Where(item => item.List.Id == list.Id).ToList()
+                )).Take(1).First();
+        return (result.Item1, result.Item2, result.Item3);
     }
 
     public async Task<bool> ExistsWithNameForUser(string userId, string listName)
@@ -75,7 +77,7 @@ public class ItemListRepo(XDbContext dbContext)
             CreatedUtc = currentDateTimeUtc
         });
         await dbContext.SaveChangesAsync();
-        return dbContext.ItemLists.First(list => list.Url.Equals(url));
+        return itemList.Entity;
     }
 
     public async Task Delete(long listId)
@@ -127,7 +129,7 @@ public class ItemListRepo(XDbContext dbContext)
         return list;
     }
 
-    public static string GenerateNewUrl()
+    private static string GenerateNewUrl()
     {
         var url = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
         // Replace URL unfriendly characters
@@ -138,5 +140,56 @@ public class ItemListRepo(XDbContext dbContext)
 
         // Remove the trailing ==
         return url;
+    }
+
+    public async Task<List<ItemListItemActionDbModel>> GetItemsForList(ItemListDbModel listDbModel)
+    {
+        return await Task.FromResult(dbContext.ItemListItemAction
+            .Where(item => item.List.Id == listDbModel.Id).ToList());
+    }
+
+    public async Task<ItemListItemActionDbModel> BuyItem(ItemListDbModel itemListDbModel, long itemId,
+        decimal pricePerOne,
+        long amount)
+    {
+        var currentDate = DateTime.UtcNow;
+        var listItem = new ItemListItemActionDbModel
+        {
+            List = itemListDbModel,
+            ItemId = itemId,
+            Action = "B",
+            Amount = amount,
+            PricePerOne = pricePerOne,
+            CreatedUtc = currentDate
+        };
+        var addedItem = await dbContext.ItemListItemAction.AddAsync(listItem);
+        await dbContext.SaveChangesAsync();
+        return addedItem.Entity;
+    }
+
+    public async Task<ItemListItemActionDbModel> SellItem(ItemListDbModel itemListDbModel, long itemId,
+        decimal pricePerOne,
+        long amount)
+    {
+        var currentDate = DateTime.UtcNow;
+        var listItem = new ItemListItemActionDbModel
+        {
+            List = itemListDbModel,
+            ItemId = itemId,
+            Action = "S",
+            PricePerOne = pricePerOne,
+            Amount = amount,
+            CreatedUtc = currentDate
+        };
+        var addedItem = await dbContext.ItemListItemAction.AddAsync(listItem);
+        await dbContext.SaveChangesAsync();
+        return addedItem.Entity;
+    }
+
+    public async Task DeleteItem(long itemActionId)
+    {
+        var itemActionToDelete = await dbContext.ItemListItemAction.FirstAsync(action => action.Id == itemActionId);
+        dbContext.ItemListItemAction.Remove(itemActionToDelete);
+        await dbContext.SaveChangesAsync();
     }
 }

@@ -1,31 +1,27 @@
-using application.Commands;
 using infrastructure.Database;
 using infrastructure.Database.Models;
+using infrastructure.Database.Repos;
 using Microsoft.Extensions.DependencyInjection;
 using TestHelper.TestSetup;
 using Xunit.Abstractions;
 
-namespace ApplicationTests;
+namespace infrastructureTests.Database;
 
-public class PriceCommandServiceTests
+public class ItemListValueRepoTest
 {
     private readonly ITestOutputHelper _outputHelper;
 
-    public PriceCommandServiceTests(ITestOutputHelper outputHelper)
+    public ItemListValueRepoTest(ITestOutputHelper outputHelper)
     {
         _outputHelper = outputHelper;
     }
 
     [Fact]
-    public async Task RefreshItemPricesTest()
+    public async Task CalculateLatestTest()
     {
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
-        serviceCollection.AddScoped<PriceCommandService>();
-        serviceCollection.AddScoped<ListCommandService>();
         await using var provider = serviceCollection.BuildServiceProvider();
-
         var dbContext = provider.GetRequiredService<XDbContext>();
-
         var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
         {
             UserId = "test_user",
@@ -77,33 +73,29 @@ public class PriceCommandServiceTests
         });
         await dbContext.SaveChangesAsync();
 
-        var priceCommandService = provider.GetRequiredService<PriceCommandService>();
-        var refreshItemPrices = await priceCommandService.RefreshItemPrices();
-        if (refreshItemPrices.IsError)
+        var itemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel
         {
-            Assert.Fail(refreshItemPrices.FirstError.Description);
-        }
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
 
-        var itemPricesCount = dbContext.ItemPrices.Count();
-        if (itemPricesCount <= 0)
+        await dbContext.ItemPrices.AddAsync(new ItemPriceDbModel
         {
-            Assert.Fail($"{itemPricesCount} item prices added to database");
-        }
+            ItemId = 1,
+            SteamPriceUsd = 1,
+            SteamPriceEur = 2,
+            BuffPriceUsd = 3,
+            BuffPriceEur = 4,
+            ItemPriceRefresh = itemPriceRefresh.Entity
+        });
+        await dbContext.SaveChangesAsync();
 
-        _outputHelper.WriteLine($"{itemPricesCount} item prices added to database");
+        var itemListValueRepo = provider.GetRequiredService<ItemListValueRepo>();
+        var newItemListValue = await itemListValueRepo.CalculateLatest(list.Entity);
 
-        var listValue = dbContext.ItemListValues.Where(listValue => listValue.List.Id == list.Entity.Id).ToList();
-        if (listValue.Count == 0)
-        {
-            Assert.Fail("No itemListValues found");
-        }
-
-        if (listValue.Count != 1)
-        {
-            Assert.Fail($"Multiple list values found ({listValue.Count})");
-        }
-
-        _outputHelper.WriteLine($"List value: {listValue.First()}");
-        Assert.True(true);
+        Assert.True(newItemListValue.SteamValue.HasValue);
+        Assert.True(newItemListValue.SteamValue.Value == 4);
+        Assert.True(newItemListValue.BuffValue.HasValue);
+        Assert.True(newItemListValue.BuffValue.Value == 8);
     }
 }

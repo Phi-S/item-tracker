@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace shared.Models;
+﻿namespace shared.Models;
 
 public class NewListModel
 {

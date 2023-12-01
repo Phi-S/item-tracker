@@ -1,7 +1,5 @@
 ﻿@page "/lists"
 @using Microsoft.AspNetCore.Authorization
-@using application.Helper
-@using shared.Models.ListResponse
 @inherits ListsRazor
 
 @attribute [Authorize]
@@ -10,7 +8,7 @@
     <div class="w-100 h-100">
         <button class="btn btn-info w-100" @onclick="OpenNewListModal">Create new list</button>
 
-        <Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OpenModalButtonText="+" OkButtonAction="NewList">
+        <Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OkButtonAction="NewList">
             <div class="mb-2">
                 <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
             </div>
