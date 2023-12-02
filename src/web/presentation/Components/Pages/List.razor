@@ -23,9 +23,25 @@
                 {
                     <div class="w-100">
                         <Modal @ref="ModalRef">
-                            <div class="input-group w-100">
-                                <SearchComponent OnItemSelected="AddEntryOnItemSelected"></SearchComponent>
-                            </div>
+                            @if (SellItem is not null)
+                            {
+                                <div class="row w-100 overflow-hidden flex-nowrap">
+                                    <div class="col-3">
+                                        <img src="@SellItem.ItemImage" style="height: 5rem" alt=""/>
+                                    </div>
+                                    <div class="col-9 d-flex align-items-center ">
+                                        <div class="text-center w-100" style="font-size: large">
+                                            @SellItem.ItemName
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="input-group w-100">
+                                    <SearchComponent OnItemSelected="AddEntryOnItemSelected"></SearchComponent>
+                                </div>
+                            }
                             <div class="input-group w-100 text-nowrap flex-nowrap pb-2">
                                 <div class="input-group-text">
                                     Amount

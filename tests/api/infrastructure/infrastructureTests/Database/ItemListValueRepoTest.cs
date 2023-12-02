@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using infrastructure.Database;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
@@ -91,8 +92,9 @@ public class ItemListValueRepoTest
         await dbContext.SaveChangesAsync();
 
         var itemListValueRepo = provider.GetRequiredService<ItemListValueRepo>();
+        var sw = Stopwatch.StartNew();
         var newItemListValue = await itemListValueRepo.CalculateLatest(list.Entity);
-
+        _outputHelper.WriteLine($"itemListValueRepo.CalculateLatest duration: {sw.ElapsedMilliseconds} ms");
         Assert.True(newItemListValue.SteamValue.HasValue);
         Assert.True(newItemListValue.SteamValue.Value == 4);
         Assert.True(newItemListValue.BuffValue.HasValue);

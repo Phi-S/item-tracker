@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using application.Commands;
 using infrastructure.Database;
 using infrastructure.Database.Models;
@@ -78,11 +79,13 @@ public class PriceCommandServiceTests
         await dbContext.SaveChangesAsync();
 
         var priceCommandService = provider.GetRequiredService<PriceCommandService>();
+        var sw = Stopwatch.StartNew();
         var refreshItemPrices = await priceCommandService.RefreshItemPrices();
         if (refreshItemPrices.IsError)
         {
             Assert.Fail(refreshItemPrices.FirstError.Description);
         }
+        sw.Stop();
 
         var itemPricesCount = dbContext.ItemPrices.Count();
         if (itemPricesCount <= 0)
@@ -103,7 +106,7 @@ public class PriceCommandServiceTests
             Assert.Fail($"Multiple list values found ({listValue.Count})");
         }
 
-        _outputHelper.WriteLine($"List value: {listValue.First()}");
+        _outputHelper.WriteLine($"priceCommandService.RefreshItemPrices duration: {sw.ElapsedMilliseconds}");
         Assert.True(true);
     }
 }

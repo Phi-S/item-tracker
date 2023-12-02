@@ -5,22 +5,26 @@ namespace infrastructure.Database.Repos;
 
 public class ItemListValueRepo(XDbContext dbContext)
 {
-    public async Task CalculateLatestForAll()
+    public async Task CalculateLatestForAll(ItemPriceRefreshDbModel? itemPriceRefreshDbModel)
     {
         var lists = dbContext.ItemLists.Where(list => list.Deleted == false).ToList();
         foreach (var list in lists)
         {
-            await CalculateLatest(list);
+            await CalculateLatest(list, itemPriceRefreshDbModel);
         }
     }
 
-    public async Task<ItemListValueDbModel> CalculateLatest(ItemListDbModel list)
+    public async Task<ItemListValueDbModel> CalculateLatest(ItemListDbModel list,
+        ItemPriceRefreshDbModel? itemPriceRefreshDbModel = null)
     {
-        ItemPriceRefreshDbModel? latestItemPriceRefresh = null;
-        if (dbContext.ItemPriceRefresh.Any())
+        var latestItemPriceRefresh = itemPriceRefreshDbModel;
+        if (latestItemPriceRefresh is null)
         {
-            latestItemPriceRefresh = await dbContext.ItemPriceRefresh.FirstOrDefaultAsync(refresh =>
-                refresh.Id == dbContext.ItemPriceRefresh.Max(price => price.Id));
+            if (dbContext.ItemPriceRefresh.Any())
+            {
+                latestItemPriceRefresh = await dbContext.ItemPriceRefresh.FirstOrDefaultAsync(refresh =>
+                    refresh.Id == dbContext.ItemPriceRefresh.Max(price => price.Id));
+            }
         }
 
         var itemsInList = dbContext.ItemListItemAction.Where(item => item.List.Id == list.Id)

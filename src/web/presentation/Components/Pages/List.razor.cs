@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components;
 using presentation.Authentication;
 using presentation.Components.Custom;
+using shared.Models;
 using shared.Models.ListResponse;
 
 namespace presentation.Components.Pages;
@@ -17,12 +18,21 @@ public class ListRazor : ComponentBase
     protected Modal? ModalRef { get; set; }
     protected ErrorComponent ErrorComponentRef = null!;
     protected ListResponse? List;
-    
-    
+
+
     private long? _addEntrySelectedItemId;
     protected decimal? AddEntryPrice;
     protected long? AddEntryAmount;
+
+    protected bool OpenSellModal;
+    protected ListItemResponse? SellItem;
+
     protected override async Task OnInitializedAsync()
+    {
+        await GetList();
+    }
+
+    private async Task GetList()
     {
         var accessToken = AuthenticationStateProvider.Token?.AccessToken;
         var list = await ItemTrackerApiService.Get(accessToken, ListUrl);
@@ -33,6 +43,7 @@ public class ListRazor : ComponentBase
         }
 
         List = list.Value;
+        StateHasChanged();
     }
 
     protected Task AddEntryOnItemSelected(long itemId)
@@ -46,12 +57,13 @@ public class ListRazor : ComponentBase
 
     protected void OpenModalBuyEntry()
     {
+        SellItem = null;
         OpenNewEntryModal(true);
     }
 
     protected void OpenModalSellEntry(ListItemResponse item)
     {
-        _addEntrySelectedItemId = item.ItemId;
+        SellItem = item;
         OpenNewEntryModal(false);
     }
 
@@ -61,9 +73,9 @@ public class ListRazor : ComponentBase
         {
             return;
         }
-        
-        var buySellString = buySell ? "buy" : "sell";
-        ModalRef.Title = $"Add {buySellString} entry";
+
+        var buySellString = buySell ? "Buy" : "Sell";
+        ModalRef.Title = $"{buySellString}";
         ModalRef.OkButtonString = ModalRef.Title;
         ModalRef.OkButtonAction = async () =>
         {
@@ -116,7 +128,9 @@ public class ListRazor : ComponentBase
                     throw new Exception($"Failed to add entry. {sellItem.FirstError.Description}");
                 }
             }
+
             ModalRef.Close();
+            await GetList();
         };
 
         ModalRef.Open();

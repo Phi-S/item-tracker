@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using BlazorBootstrap;
 
-namespace presentation;
+namespace presentation.BlazorExtensions;
 
 public class LineChartOptionsExtension : ChartOptions
 {
