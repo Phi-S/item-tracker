@@ -12,7 +12,7 @@ using infrastructure.Database;
 namespace infrastructure.Database.Migrations
 {
     [DbContext(typeof(XDbContext))]
-    [Migration("20231201160031_InitialCreate")]
+    [Migration("20231202001212_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -124,6 +124,9 @@ namespace infrastructure.Database.Migrations
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("InvestedCapital")
+                        .HasColumnType("numeric");
 
                     b.Property<long?>("ItemPriceRefreshId")
                         .HasColumnType("bigint");

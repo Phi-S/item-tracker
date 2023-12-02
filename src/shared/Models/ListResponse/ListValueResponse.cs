@@ -7,6 +7,8 @@ public record ListValueResponse(
     decimal? SteamValue,
     [property: JsonRequired, JsonPropertyName("buffValue")]
     decimal? BuffValue,
+    [property: JsonRequired, JsonPropertyName("investedCapital")]
+    decimal InvestedCapital,
     [property: JsonRequired, JsonPropertyName("createdAt")]
     DateTime CreatedAt
 );

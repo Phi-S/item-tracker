@@ -1,32 +1,43 @@
 ﻿@page "/lists"
 @using Microsoft.AspNetCore.Authorization
+@using application.Helper
 @inherits ListsRazor
 
 @attribute [Authorize]
 
+<Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OkButtonAction="NewList">
+    <div class="mb-2">
+        <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
+    </div>
+    <div class="mb-2">
+        <input @bind="NewListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
+    </div>
+    <div class="form-floating mb-2">
+        <select @bind="NewListModel.Currency" id="currencySelect" class="form-select">
+            <option selected value="EUR">€</option>
+            <option value="USD">$</option>
+        </select>
+        <label for="currencySelect">Currency</label>
+    </div>
+    <div class="mb-3">
+        <input @bind="NewListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
+        <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
+    </div>
+</Modal>
+
 <ErrorComponent @ref="ErrorComponentRef">
     <div class="w-100 h-100">
-        <button class="btn btn-info w-100" @onclick="OpenNewListModal">Create new list</button>
-
-        <Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OkButtonAction="NewList">
-            <div class="mb-2">
-                <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
+        <div class="row mb-2 text-center align-items-center border border-2 rounded-2">
+            <div class="col-3 border-end">
+                @Lists?.Count Lists
             </div>
-            <div class="mb-2">
-                <input @bind="NewListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
+            <div class="col-3 border-end">
+                @Lists?.Sum(list => list.Items.Sum(item => item.TotalBuyAmount - item.TotalSellAmount)) Items
             </div>
-            <div class="form-floating mb-2">
-                <select @bind="NewListModel.Currency" id="currencySelect" class="form-select">
-                    <option selected value="EUR">€</option>
-                    <option value="USD">$</option>
-                </select>
-                <label for="currencySelect">Currency</label>
+            <div class="col-6 border-end">
+                <button class="btn w-100" @onclick="OpenNewListModal">Create new list</button>
             </div>
-            <div class="mb-3">
-                <input @bind="NewListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
-                <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
-            </div>
-        </Modal>
+        </div>
 
         @if (Lists is null)
         {
@@ -34,14 +45,12 @@
         }
         else
         {
-            <div class="container">
-                @foreach (var list in Lists)
-                {
-                    <div style="height: 10rem">
-                        <ListDisplay List="list"/>
-                    </div>
-                }
-            </div>
+            @foreach (var list in Lists)
+            {
+                <div class="row mb-1" style="height: 10rem">
+                    <ListDisplay List="list"/>
+                </div>
+            }
         }
     </div>
 </ErrorComponent>

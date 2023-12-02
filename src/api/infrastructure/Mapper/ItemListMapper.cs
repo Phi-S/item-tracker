@@ -14,23 +14,58 @@ public static class ItemListMapper
         ItemsService itemsService)
     {
         var items = new List<ListItemResponse>();
-        foreach (var itemListItemAction in itemListItemActions)
+        foreach (var itemListItemActionsGroup in itemListItemActions.GroupBy(action => action.ItemId))
         {
-            var itemInfo = itemsService.GetById(itemListItemAction.ItemId);
-            if (itemInfo.IsError)
+            var itemInfoResult = itemsService.GetById(itemListItemActionsGroup.Key);
+            if (itemInfoResult.IsError)
             {
-                return itemInfo.FirstError;
+                return itemInfoResult.FirstError;
             }
 
+            var itemInfo = itemInfoResult.Value;
+            var itemActions = new List<ListItemActionResponse>();
+            var buyActions = new List<ListItemActionResponse>();
+            var sellActions = new List<ListItemActionResponse>();
+            foreach (var itemListItemAction in itemListItemActionsGroup)
+            {
+                var action = new ListItemActionResponse(
+                    itemListItemAction.Id,
+                    itemListItemAction.Action,
+                    itemListItemAction.Amount,
+                    itemListItemAction.PricePerOne,
+                    itemListItemAction.CreatedUtc
+                );
+                itemActions.Add(action);
+                if (itemListItemAction.Action.Equals("B"))
+                {
+                    buyActions.Add(action);
+                }
+                else if (itemListItemAction.Action.Equals("S"))
+                {
+                    sellActions.Add(action);
+                }
+            }
+
+            var totalBuyAmount = buyActions.Sum(action => action.Amount);
+            var totalBuyPrice = buyActions.Sum(action => action.Amount * action.PricePerOne);
+            var averageBuyPrice = totalBuyAmount == 0 ? 0 : totalBuyPrice / totalBuyAmount;
+
+            var totalSellAmount = sellActions.Sum(action => action.Amount);
+            var totalSellPrice = buyActions.Sum(action => action.Amount * action.PricePerOne);
+            var averageSellPrice = totalSellAmount == 0 ? 0 : totalSellPrice / totalSellAmount;
+
             var item = new ListItemResponse(
-                itemListItemAction.Id,
-                itemListItemAction.ItemId,
-                itemInfo.Value.Name,
-                itemInfo.Value.Image,
-                itemListItemAction.Action,
-                itemListItemAction.PricePerOne,
-                itemListItemAction.Amount,
-                itemListItemAction.CreatedUtc);
+                itemInfo.Id,
+                itemInfo.Name,
+                itemInfo.Image,
+                totalBuyAmount,
+                totalBuyPrice,
+                averageBuyPrice,
+                totalSellAmount,
+                totalSellPrice,
+                averageSellPrice,
+                itemActions
+            );
             items.Add(item);
         }
 
@@ -40,6 +75,7 @@ public static class ItemListMapper
             var listValue = new ListValueResponse(
                 itemListValue.SteamValue,
                 itemListValue.BuffValue,
+                itemListValue.InvestedCapital,
                 itemListValue.CreatedUtc
             );
             listValues.Add(listValue);

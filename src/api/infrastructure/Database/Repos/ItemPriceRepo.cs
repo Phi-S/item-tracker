@@ -6,7 +6,7 @@ public class ItemPriceRepo(XDbContext dbContext)
 {
     public async Task<ItemPriceRefreshDbModel> CreateNew()
     {
-        var newItemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel()
+        var newItemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel
         {
             CreatedUtc = DateTime.UtcNow
         });
@@ -14,7 +14,7 @@ public class ItemPriceRepo(XDbContext dbContext)
         return newItemPriceRefresh.Entity;
     }
 
-    public async Task Add(List<ItemPriceDbModel> itemPrices)
+    public async Task Add(IEnumerable<ItemPriceDbModel> itemPrices)
     {
         await dbContext.ItemPrices.AddRangeAsync(itemPrices);
         await dbContext.SaveChangesAsync();

@@ -35,7 +35,6 @@ public class PriceCommandService
 
     public async Task<ErrorOr<Success>> RefreshItemPrices()
     {
-        var priceRefresh = await _itemPriceRepo.CreateNew();
         var prices = await _itemPriceService.GetPrices();
         if (prices.IsError)
         {
@@ -48,6 +47,7 @@ public class PriceCommandService
             return exchangeRate.FirstError;
         }
 
+        var priceRefresh = await _itemPriceRepo.CreateNew();
         var dbPrices = new List<ItemPriceDbModel>();
         var itemPricesNotFountByItemsService = new List<PriceModel>();
         foreach (var price in prices.Value)

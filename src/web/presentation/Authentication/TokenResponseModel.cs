@@ -8,7 +8,7 @@ public record TokenResponseModel(
     [property: JsonPropertyName("id_token")]
     string IdToken,
     [property: JsonPropertyName("refresh_token")]
-    string RefreshToken,
+    string? RefreshToken,
     [property: JsonPropertyName("token_type")]
     string TokenType,
     [property: JsonPropertyName("expires_in")]

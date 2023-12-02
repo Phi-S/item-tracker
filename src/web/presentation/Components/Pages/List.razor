@@ -10,14 +10,13 @@
     }
     else
     {
-        <div class="pb-2" style="height: 10rem">
+        <div class="pb-2" style="height: 15rem">
             <ListDisplay List="List"/>
         </div>
         <AuthorizeView>
             <Authorized>
                 <div class="input-group">
-                    <button class="btn btn-success w-50" @onclick="OpenModalBuyEntry">Add Buy entry</button>
-                    <button class="btn btn-danger w-50" @onclick="OpenModalSellEntry">Add Sell entry</button>
+                    <button class="btn btn-success w-100" @onclick="OpenModalBuyEntry">Add Buy entry</button>
                 </div>
 
                 @if (context.User.Claims.UserId().Equals(List.UserId))
@@ -57,16 +56,44 @@
             </Authorized>
         </AuthorizeView>
 
-        <div class="container">
+        <table class="table table-dark table-striped w-100">
+            <thead>
+            <tr>
+                <th scope="col" colspan="2">Item</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Average buy price /1</th>
+                <th scope="col">Total price</th>
+                <th scope="col" colspan="2"></th>
+            </tr>
+            </thead>
+            <tbody class="w-100">
             @foreach (var item in List.Items)
             {
-                <div>
-                    <img src="@item.ItemImage" alt="" style="height: 50px"/>
-                    <span>@item.ItemName</span>
-                    <span>@item.Amount x @CurrencyHelper.FormatCurrency(List.Currency, item.PricePerOne)</span>
-                    <button class="btn btn-close" @onclick="() => Delete(item)"></button>
-                </div>
+                <tr class="w-100 pb-1 align-items-center text-center align-middle" style="height: 4rem">
+                    <td class="col-2 h-100">
+                        <img class="h-100 w-100" src="@item.ItemImage" alt="" style="object-fit: contain"/>
+                    </td>
+                    <td class="col-3">
+                        <span class="w-100">@item.ItemName</span>
+                    </td>
+                    <td class="col-1">
+                        <span class="w-100">@(item.TotalBuyAmount - item.TotalSellAmount)</span>
+                    </td>
+                    <td class="col-2">
+                        <span class="w-100">@CurrencyHelper.FormatCurrency(List.Currency, item.AverageBuyPrice)</span>
+                    </td>
+                    <td class="col-1">
+                        <span class="w-100">@CurrencyHelper.FormatCurrency(List.Currency, item.TotalBuyPrice)</span>
+                    </td>
+                    <td class="col-2">
+                        <button class="btn btn-outline-danger w-100" @onclick="() => OpenModalSellEntry(item)">Sell</button>
+                    </td>
+                    <td class="col-1 ps-2">
+                        <button class="btn btn-close w-100" @onclick="() => Delete(item)"></button>
+                    </td>
+                </tr>
             }
-        </div>
+            </tbody>
+        </table>
     }
 </ErrorComponent>

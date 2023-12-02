@@ -9,7 +9,7 @@ public static class ListResponseHelper
         var latestListValue = listResponse.ListValues.MaxBy(list => list.CreatedAt);
         return CurrencyHelper.FormatCurrency(
             listResponse.Currency,
-            latestListValue?.SteamValue ?? 0
+            latestListValue?.InvestedCapital ?? 0
         );
     }
 }

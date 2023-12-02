@@ -15,7 +15,7 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
     private const string ConfigurationAuthClientIdKey = "ClientId";
 
     private const string TokenKey = "token";
-
+    private const string RefreshTokenKey = "refresh_token";
 
     public TokenResponseModel? Token { get; private set; }
     private readonly string _authority;
@@ -64,8 +64,6 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         try
         {
             var token = await _localStorageService.GetItemAsync<TokenResponseModel>(TokenKey);
-            _logger.LogInformation("Token: {Token}", token);
-
             if (token is null)
             {
                 _logger.LogInformation("No token found in local storage");
@@ -75,14 +73,24 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
             if (DateTime.UtcNow > token.ExpirationUtc)
             {
                 _logger.LogInformation("Token has expired. Trying to refresh");
-                var refresh = await Refresh(token.RefreshToken);
+                var refreshToken = await _localStorageService.GetItemAsStringAsync(RefreshTokenKey);
+                if (string.IsNullOrWhiteSpace(refreshToken))
+                {
+                    _logger.LogInformation("No refresh_token found in local storage");
+                    await _localStorageService.RemoveItemAsync(RefreshTokenKey);
+                    return ReturnNotAuthenticated();
+                }
+
+                var refresh = await Refresh(refreshToken);
                 if (refresh.IsError)
                 {
                     _logger.LogInformation("Failed to refresh token");
                     await _localStorageService.RemoveItemAsync(TokenKey);
+                    await _localStorageService.RemoveItemAsync(RefreshTokenKey);
                     return ReturnNotAuthenticated();
                 }
 
+                _logger.LogInformation("Token has been refreshed");
                 await _localStorageService.SetItemAsync(TokenKey, refresh.Value);
                 token = refresh.Value;
             }
@@ -170,6 +178,7 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         var currentDateTime = DateTime.UtcNow;
         tokenResponseModel.ExpirationUtc = currentDateTime.Add(TimeSpan.FromSeconds(tokenResponseModel.ExpiresIn));
         await _localStorageService.SetItemAsync(TokenKey, tokenResponseModel);
+        await _localStorageService.SetItemAsStringAsync(RefreshTokenKey, tokenResponseModel.RefreshToken);
         return Result.Success;
     }
 
@@ -182,7 +191,7 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         {
             new KeyValuePair<string, string>("grant_type", "refresh_token"),
             new KeyValuePair<string, string>("client_id", _clientId),
-            new KeyValuePair<string, string>("refresh_token", refreshToken),
+            new KeyValuePair<string, string>("refresh_token", refreshToken)
         });
 
         var response = await _httpClient.SendAsync(request);

@@ -17,10 +17,11 @@ public class ListRazor : ComponentBase
     protected Modal? ModalRef { get; set; }
     protected ErrorComponent ErrorComponentRef = null!;
     protected ListResponse? List;
+    
+    
     private long? _addEntrySelectedItemId;
     protected decimal? AddEntryPrice;
     protected long? AddEntryAmount;
-
     protected override async Task OnInitializedAsync()
     {
         var accessToken = AuthenticationStateProvider.Token?.AccessToken;
@@ -48,10 +49,10 @@ public class ListRazor : ComponentBase
         OpenNewEntryModal(true);
     }
 
-    protected void OpenModalSellEntry()
+    protected void OpenModalSellEntry(ListItemResponse item)
     {
+        _addEntrySelectedItemId = item.ItemId;
         OpenNewEntryModal(false);
-
     }
 
     protected void OpenNewEntryModal(bool buySell)
@@ -60,7 +61,7 @@ public class ListRazor : ComponentBase
         {
             return;
         }
-
+        
         var buySellString = buySell ? "buy" : "sell";
         ModalRef.Title = $"Add {buySellString} entry";
         ModalRef.OkButtonString = ModalRef.Title;
@@ -115,6 +116,7 @@ public class ListRazor : ComponentBase
                     throw new Exception($"Failed to add entry. {sellItem.FirstError.Description}");
                 }
             }
+            ModalRef.Close();
         };
 
         ModalRef.Open();

@@ -3,20 +3,24 @@
 @using BlazorBootstrap
 @inherits ListDisplayRazor
 
-<div class="row align-items-center h-100 border-2 border mt-2 ms-0 me-0 p-0">
-    <button class="col-2 btn h-100" @onclick="NavigateToList">
-        <div>
-            <span class="text-decoration-underline">@List.Name</span>
-            <br/>
-            <span class="small">@List.Description</span>
+<div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
+    <button class="col-3 h-100 container btn border-end rounded-0" @onclick="NavigateToList">
+        <div class="row row-cols-1 h-25 justify-content-center text-decoration-underline font-monospace p-1">
+            @List.Name
+        </div>
+        <div class="row row-cols-10 h-50 justify-content-center font-monospace p-1" style="font-size: small">
+            <div class="h-100">
+                @List.Description
+            </div>
+        </div>
+        <div class="row row-cols-1 h-25 justify-content-center font-monospace p-1">
+            @List.Items.Sum(item => item.TotalBuyAmount - item.TotalSellAmount) Items
         </div>
     </button>
-    <span class="col-1">@ListResponseHelper.GetCurrentValue(List)</span>
-    
+
     <div class="col-8 h-100">
         <LineChart @ref="LineChart" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
     </div>
-    <div class="col-1 text-center">
-        <button class="btn btn-close" @onclick="() => DeleteList(List.Url)"></button>
-    </div>
+
+    <button class="col-1 btn bi-play-fill m-0 p-0" @onclick="NavigateToList"></button>
 </div>

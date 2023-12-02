@@ -24,7 +24,8 @@
     public string Title { get; set; } = "Title";
 
     [Parameter]
-    public RenderFragment? ChildContent { get; set; }
+    [EditorRequired]
+    public RenderFragment ChildContent { get; set; } = null!;
 
     [Parameter]
     public string OkButtonString { get; set; } = "Ok";

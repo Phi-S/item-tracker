@@ -5,17 +5,6 @@ namespace infrastructure.Database.Repos;
 
 public class ItemListValueRepo(XDbContext dbContext)
 {
-    public async Task<List<ItemListValueDbModel>> GetAll(ItemListDbModel listDbModel)
-    {
-        return await dbContext.ItemListValues.Where(value => value.List.Id == listDbModel.Id).ToListAsync();
-    }
-
-    public async Task Add(ItemListValueDbModel itemListValueDbModel)
-    {
-        await dbContext.ItemListValues.AddAsync(itemListValueDbModel);
-        await dbContext.SaveChangesAsync();
-    }
-
     public async Task CalculateLatestForAll()
     {
         var lists = dbContext.ItemLists.Where(list => list.Deleted == false).ToList();
@@ -27,80 +16,82 @@ public class ItemListValueRepo(XDbContext dbContext)
 
     public async Task<ItemListValueDbModel> CalculateLatest(ItemListDbModel list)
     {
-        var latestItemPrices = dbContext.ItemPrices.Where(price =>
-                price.ItemPriceRefresh.Id == dbContext.ItemPriceRefresh.Max(refreshMax => refreshMax.Id))
-            .Include(itemPriceDbModel => itemPriceDbModel.ItemPriceRefresh)
-            .ToList();
-        
+        ItemPriceRefreshDbModel? latestItemPriceRefresh = null;
+        if (dbContext.ItemPriceRefresh.Any())
+        {
+            latestItemPriceRefresh = await dbContext.ItemPriceRefresh.FirstOrDefaultAsync(refresh =>
+                refresh.Id == dbContext.ItemPriceRefresh.Max(price => price.Id));
+        }
+
         var itemsInList = dbContext.ItemListItemAction.Where(item => item.List.Id == list.Id)
             .GroupBy(item => item.ItemId).ToList();
+
         var steamValues = new List<decimal>();
         var buffValues = new List<decimal>();
-
-        foreach (var item in itemsInList)
+        decimal totalCapitalInvested = 0;
+        foreach (var itemActions in itemsInList)
         {
-            var itemPrice = latestItemPrices.FirstOrDefault(price => price.ItemId == item.Key);
-            if (itemPrice is null)
-            {
-                continue;
-            }
-            
-            var actions = item.ToList();
             long totalItemCount = 0;
-            foreach (var itemAction in actions)
+            foreach (var itemAction in itemActions)
             {
                 if (itemAction.Action.Equals("B"))
                 {
                     totalItemCount += itemAction.Amount;
+                    totalCapitalInvested += itemAction.Amount * itemAction.PricePerOne;
                 }
                 else if (itemAction.Action.Equals("S"))
                 {
                     totalItemCount -= itemAction.Amount;
+                    totalCapitalInvested -= itemAction.Amount * itemAction.PricePerOne;
                 }
             }
 
-            switch (list.Currency)
+            if (latestItemPriceRefresh is null)
             {
-                case "EUR":
+                continue;
+            }
+
+            var itemPrice = await dbContext.ItemPrices.FirstOrDefaultAsync(price =>
+                price.ItemPriceRefresh.Id == latestItemPriceRefresh.Id &&
+                price.ItemId == itemActions.Key);
+            if (itemPrice is null)
+            {
+                continue;
+            }
+
+            if (list.Currency == "EUR")
+            {
+                if (itemPrice.SteamPriceEur is not null)
                 {
-                    if (itemPrice.SteamPriceEur is not null)
-                    {
-                        steamValues.Add(itemPrice.SteamPriceEur.Value * totalItemCount);
-                    }
-
-                    if (itemPrice.BuffPriceEur is not null)
-                    {
-                        buffValues.Add(itemPrice.BuffPriceEur.Value * totalItemCount);
-                    }
-
-                    break;
+                    steamValues.Add(itemPrice.SteamPriceEur.Value * totalItemCount);
                 }
-                case "USD":
+
+                if (itemPrice.BuffPriceEur is not null)
                 {
-                    if (itemPrice.SteamPriceUsd is not null)
-                    {
-                        steamValues.Add(itemPrice.SteamPriceUsd.Value * totalItemCount);
-                    }
+                    buffValues.Add(itemPrice.BuffPriceEur.Value * totalItemCount);
+                }
+            }
+            else if (list.Currency == "USD")
+            {
+                if (itemPrice.SteamPriceUsd is not null)
+                {
+                    steamValues.Add(itemPrice.SteamPriceUsd.Value * totalItemCount);
+                }
 
-                    if (itemPrice.BuffPriceUsd is not null)
-                    {
-                        buffValues.Add(itemPrice.BuffPriceUsd.Value * totalItemCount);
-                    }
-
-                    break;
+                if (itemPrice.BuffPriceUsd is not null)
+                {
+                    buffValues.Add(itemPrice.BuffPriceUsd.Value * totalItemCount);
                 }
             }
         }
 
-        
-        decimal? steamValueResult = steamValues.Count != 0 ? steamValues.Sum() : null;
-        decimal? buffValueResult = buffValues.Count != 0 ? buffValues.Sum() : null;
         var listValue = new ItemListValueDbModel
         {
             List = list,
-            SteamValue = steamValueResult,
-            BuffValue = buffValueResult,
-            ItemPriceRefresh = latestItemPrices.FirstOrDefault()?.ItemPriceRefresh,
+            SteamValue = steamValues.Count != 0 ? steamValues.Sum() : null,
+            BuffValue = buffValues.Count != 0 ? buffValues.Sum() : null,
+            InvestedCapital = totalCapitalInvested,
+            ItemPriceRefresh = latestItemPriceRefresh,
             CreatedUtc = DateTime.UtcNow
         };
         var newItemListValue = await dbContext.ItemListValues.AddAsync(listValue);

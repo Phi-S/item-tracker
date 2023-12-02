@@ -1,4 +1,5 @@
-﻿using infrastructure.Database.Models;
+﻿using ErrorOr;
+using infrastructure.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace infrastructure.Database.Repos;
@@ -19,11 +20,10 @@ public class ItemListRepo(XDbContext dbContext)
     }
 
     public (ItemListDbModel list, List<ItemListValueDbModel> listValues, List<ItemListItemActionDbModel> items)
-        GetListInfos(
-            string listUrl)
+        GetListInfos(long listId)
     {
         var result =
-            dbContext.ItemLists.Where(list => list.Deleted == false && list.Url.Equals(listUrl))
+            dbContext.ItemLists.Where(list => list.Deleted == false && list.Id == listId)
                 .Select(list => Tuple.Create(
                     list,
                     dbContext.ItemListValues.Where(value => value.List.Id == list.Id).ToList(),
@@ -38,21 +38,15 @@ public class ItemListRepo(XDbContext dbContext)
             list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
     }
 
-    public async Task<ItemListDbModel> GetByUrl(string url)
+    public async Task<ErrorOr<ItemListDbModel>> GetByUrl(string url)
     {
-        return await dbContext.ItemLists.FirstAsync(list => list.Deleted == false && list.Url.Equals(url));
-    }
+        var list = await dbContext.ItemLists.FirstOrDefaultAsync(list => list.Deleted == false && list.Url.Equals(url));
+        if (list is null)
+        {
+            return Error.NotFound(description: "No list found for the given url");
+        }
 
-    public Task<IEnumerable<ItemListDbModel>> GetAllForUserSub(string userId)
-    {
-        return Task.FromResult<IEnumerable<ItemListDbModel>>(dbContext.ItemLists.Where(list =>
-            list.Deleted == false && list.UserId.Equals(userId)));
-    }
-
-    public async Task<bool> ListNameExists(string userId, string listName)
-    {
-        return await dbContext.ItemLists.AnyAsync(list =>
-            list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
+        return list;
     }
 
     public async Task<ItemListDbModel> New(
@@ -142,41 +136,25 @@ public class ItemListRepo(XDbContext dbContext)
         return url;
     }
 
-    public async Task<List<ItemListItemActionDbModel>> GetItemsForList(ItemListDbModel listDbModel)
-    {
-        return await Task.FromResult(dbContext.ItemListItemAction
-            .Where(item => item.List.Id == listDbModel.Id).ToList());
-    }
-
-    public async Task<ItemListItemActionDbModel> BuyItem(ItemListDbModel itemListDbModel, long itemId,
+    public async Task<ItemListItemActionDbModel> AddItemAction(
+        string actionType,
+        ItemListDbModel itemListDbModel,
+        long itemId,
         decimal pricePerOne,
         long amount)
     {
+        if (string.IsNullOrWhiteSpace(actionType) ||
+            (actionType.Equals("B") == false && actionType.Equals("S") == false))
+        {
+            throw new Exception($"Action type \"{actionType}\" is not valid");
+        }
+
         var currentDate = DateTime.UtcNow;
         var listItem = new ItemListItemActionDbModel
         {
             List = itemListDbModel,
             ItemId = itemId,
-            Action = "B",
-            Amount = amount,
-            PricePerOne = pricePerOne,
-            CreatedUtc = currentDate
-        };
-        var addedItem = await dbContext.ItemListItemAction.AddAsync(listItem);
-        await dbContext.SaveChangesAsync();
-        return addedItem.Entity;
-    }
-
-    public async Task<ItemListItemActionDbModel> SellItem(ItemListDbModel itemListDbModel, long itemId,
-        decimal pricePerOne,
-        long amount)
-    {
-        var currentDate = DateTime.UtcNow;
-        var listItem = new ItemListItemActionDbModel
-        {
-            List = itemListDbModel,
-            ItemId = itemId,
-            Action = "S",
+            Action = actionType,
             PricePerOne = pricePerOne,
             Amount = amount,
             CreatedUtc = currentDate

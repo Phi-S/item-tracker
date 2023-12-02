@@ -79,6 +79,7 @@ namespace infrastructure.Database.Migrations
                     ListId = table.Column<long>(type: "bigint", nullable: false),
                     SteamValue = table.Column<decimal>(type: "numeric", nullable: true),
                     BuffValue = table.Column<decimal>(type: "numeric", nullable: true),
+                    InvestedCapital = table.Column<decimal>(type: "numeric", nullable: false),
                     ItemPriceRefreshId = table.Column<long>(type: "bigint", nullable: true),
                     CreatedUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },

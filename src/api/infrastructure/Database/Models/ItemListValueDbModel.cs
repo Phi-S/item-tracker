@@ -8,6 +8,7 @@ public class ItemListValueDbModel
     [Required] public required ItemListDbModel List { get; set; }
     public decimal? SteamValue { get; set; }
     public decimal? BuffValue { get; set; }
+    [Required] public required decimal InvestedCapital { get; set; }
     public ItemPriceRefreshDbModel? ItemPriceRefresh { get; set; }
     [Required] public required DateTime CreatedUtc { get; set; }
 }
