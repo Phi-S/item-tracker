@@ -5,22 +5,25 @@
 
 <div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
     <button class="col-3 h-100 container btn border-end rounded-0" @onclick="NavigateToList">
-        <div class="row row-cols-1 h-25 justify-content-center text-decoration-underline font-monospace p-1">
+        <div class="row row-cols-1 justify-content-center text-decoration-underline font-monospace p-1" style="height: 15%">
             @List.Name
         </div>
-        <div class="row row-cols-10 h-50 justify-content-center font-monospace p-1" style="font-size: small">
+        <div class="row row-cols-10 justify-content-center font-monospace p-1" style="font-size: small; height: 70%">
             <div class="h-100">
                 @List.Description
             </div>
         </div>
-        <div class="row row-cols-1 h-25 justify-content-center font-monospace p-1">
+        <div class="row row-cols-1 justify-content-center font-monospace p-1 align-content-end" style="height: 15%">
             @List.Items.Sum(item => item.TotalBuyAmount - item.TotalSellAmount) Items
         </div>
     </button>
 
-    <div class="col-8 h-100">
+    <div class="@(DisplayGoToListButton ? "col-8" : "col-9") h-100 p-0">
         <LineChart @ref="LineChart" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
     </div>
 
-    <button class="col-1 btn bi-play-fill m-0 p-0" @onclick="NavigateToList"></button>
+    @if (DisplayGoToListButton)
+    {
+        <button class="col-1 btn bi-play-fill m-0 p-0" @onclick="NavigateToList"></button>
+    }
 </div>

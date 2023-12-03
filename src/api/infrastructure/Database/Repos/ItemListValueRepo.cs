@@ -14,7 +14,8 @@ public class ItemListValueRepo(XDbContext dbContext)
         }
     }
 
-    public async Task<ItemListValueDbModel> CalculateLatest(ItemListDbModel list,
+    public async Task<ItemListValueDbModel> CalculateLatest(
+        ItemListDbModel list,
         ItemPriceRefreshDbModel? itemPriceRefreshDbModel = null)
     {
         var latestItemPriceRefresh = itemPriceRefreshDbModel;

@@ -56,7 +56,13 @@ public class ItemListRepo(XDbContext dbContext)
         string currency,
         bool makeListPublic)
     {
-        var url = GenerateNewUrl();
+        var url = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        // Replace URL unfriendly characters
+        url = url
+            .Replace("=", "")
+            .Replace("/", "_")
+            .Replace("+", "-");
+
         var currentDateTimeUtc = DateTime.UtcNow;
         var itemList = await dbContext.ItemLists.AddAsync(new ItemListDbModel
         {
@@ -74,71 +80,16 @@ public class ItemListRepo(XDbContext dbContext)
         return itemList.Entity;
     }
 
-    public async Task Delete(long listId)
+    public async Task DeleteList(long listId)
     {
         var listToRemove = await dbContext.ItemLists.FirstAsync(list => list.Id == listId);
         listToRemove.Deleted = true;
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<ItemListDbModel> UpdateName(long listId, string newListName)
-    {
-        var list = await dbContext.ItemLists.FirstAsync(itemList => itemList.Id == listId);
-        if (list.Name.Equals(newListName))
-        {
-            return list;
-        }
-
-        list.Name = newListName;
-        list.UpdatedUtc = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
-        return list;
-    }
-
-    public async Task<ItemListDbModel> UpdateDescription(long listId, string newDescription)
-    {
-        var list = await dbContext.ItemLists.FirstAsync(itemList => itemList.Id == listId);
-        if (!string.IsNullOrWhiteSpace(list.Description) && list.Description.Equals(newDescription))
-        {
-            return list;
-        }
-
-        list.Description = newDescription;
-        list.UpdatedUtc = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
-        return list;
-    }
-
-    public async Task<ItemListDbModel> UpdatePublic(long listId, bool makeListPublic)
-    {
-        var list = await dbContext.ItemLists.FirstAsync(itemList => itemList.Id == listId);
-        if (list.Public == makeListPublic)
-        {
-            return list;
-        }
-
-        list.Public = makeListPublic;
-        list.UpdatedUtc = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync();
-        return list;
-    }
-
-    private static string GenerateNewUrl()
-    {
-        var url = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        // Replace URL unfriendly characters
-        url = url
-            .Replace("=", "")
-            .Replace("/", "_")
-            .Replace("+", "-");
-
-        // Remove the trailing ==
-        return url;
-    }
-
     public async Task<ItemListItemActionDbModel> AddItemAction(
         string actionType,
-        ItemListDbModel itemListDbModel,
+        ItemListDbModel list,
         long itemId,
         decimal pricePerOne,
         long amount)
@@ -152,7 +103,7 @@ public class ItemListRepo(XDbContext dbContext)
         var currentDate = DateTime.UtcNow;
         var listItem = new ItemListItemActionDbModel
         {
-            List = itemListDbModel,
+            List = list,
             ItemId = itemId,
             Action = actionType,
             PricePerOne = pricePerOne,
@@ -164,10 +115,30 @@ public class ItemListRepo(XDbContext dbContext)
         return addedItem.Entity;
     }
 
-    public async Task DeleteItem(long itemActionId)
+    public async Task UpdateName(long listId, string newListName)
     {
-        var itemActionToDelete = await dbContext.ItemListItemAction.FirstAsync(action => action.Id == itemActionId);
-        dbContext.ItemListItemAction.Remove(itemActionToDelete);
-        await dbContext.SaveChangesAsync();
+        await dbContext.ItemLists
+            .Where(l => l.Id == listId)
+            .ExecuteUpdateAsync(b =>
+                b.SetProperty(l => l.Name, newListName)
+            );
+    }
+
+    public async Task UpdateDescription(long listId, string newDescription)
+    {
+        await dbContext.ItemLists
+            .Where(l => l.Id == listId)
+            .ExecuteUpdateAsync(b =>
+                b.SetProperty(l => l.Description, newDescription)
+            );
+    }
+
+    public async Task UpdatePublic(long listId, bool newPublic)
+    {
+        await dbContext.ItemLists
+            .Where(l => l.Id == listId)
+            .ExecuteUpdateAsync(b =>
+                b.SetProperty(l => l.Public, newPublic)
+            );
     }
 }

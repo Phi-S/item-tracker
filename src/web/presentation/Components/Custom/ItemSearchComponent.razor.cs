@@ -1,28 +1,33 @@
 ﻿using infrastructure.ItemTrackerApi;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using presentation.Authentication;
 using shared.Models;
 
 namespace presentation.Components.Custom;
 
-public class SearchComponentRazor : ComponentBase
+public class ItemSearchComponentRazor : ComponentBase
 {
-    [Parameter] [EditorRequired] public Func<long, Task> OnItemSelected { get; set; } = null!;
-
     [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
-
     [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = null!;
 
-    protected ElementReference SearchResponsesDivRef;
+    public ItemSearchResponse? SelectedItemSearchResponse { get; private set; }
+    protected InputText InputRef = null!;
     protected readonly List<ItemSearchResponse> ItemSearchResponses = new();
     protected string HideSearchResponsesClass = "visually-hidden";
-
-    protected string CurrentSearchBoxContent { get; set; } = "";
-
-    private string? _searchBoxContent = "";
+    protected bool LockInput;
 
     private volatile bool _backgroundTaskRunning;
     private DateTime _lastInput;
+
+    public void Reset(ItemSearchResponse? selectedItem = null, bool lockInput = false)
+    {
+        LockInput = lockInput;
+        SelectedItemSearchResponse = selectedItem;
+        InputRef.Value = SelectedItemSearchResponse is not null ? SelectedItemSearchResponse.Name : "";
+        ItemSearchResponses.Clear();
+        InvokeAsync(StateHasChanged);
+    }
 
     private void StartBackgroundTask()
     {
@@ -46,7 +51,8 @@ public class SearchComponentRazor : ComponentBase
                         continue;
                     }
 
-                    if (string.IsNullOrWhiteSpace(_searchBoxContent) || _searchBoxContent.Length < 3)
+                    var searchString = InputRef.Value;
+                    if (string.IsNullOrWhiteSpace(searchString) || searchString.Length < 3)
                     {
                         break;
                     }
@@ -57,7 +63,7 @@ public class SearchComponentRazor : ComponentBase
                         throw new Exception("No access token set");
                     }
 
-                    var searchResult = await ItemTrackerApiService.Search(_searchBoxContent, accessToken);
+                    var searchResult = await ItemTrackerApiService.Search(searchString, accessToken);
                     if (searchResult.IsError)
                     {
                         throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
@@ -79,18 +85,15 @@ public class SearchComponentRazor : ComponentBase
 
     protected void OnInput(ChangeEventArgs obj)
     {
-        Console.WriteLine($"#### {CurrentSearchBoxContent} | ");
         var searchText = obj.Value?.ToString()?.Trim();
-        _searchBoxContent = searchText;
+        InputRef.Value = searchText;
         StartBackgroundTask();
     }
 
     protected void OnSelect(ItemSearchResponse item)
     {
-        Console.WriteLine("========");
-        Console.WriteLine(CurrentSearchBoxContent);
-        CurrentSearchBoxContent = item.Name;
-        OnItemSelected.Invoke(item.Id);
+        InputRef.Value = item.Name;
+        SelectedItemSearchResponse = item;
         StateHasChanged();
     }
 
@@ -110,5 +113,6 @@ public class SearchComponentRazor : ComponentBase
         }
 
         HideSearchResponsesClass = "";
+        StateHasChanged();
     }
 }

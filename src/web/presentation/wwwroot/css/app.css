@@ -1,3 +1,7 @@
+* {
+    font-family: monospace;
+}
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }

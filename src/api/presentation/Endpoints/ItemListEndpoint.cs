@@ -22,9 +22,14 @@ public static class ItemListEndpoint
         {
             var userId = context.User.Id();
             var lists = await listCommandService.GetAllForUser(userId);
-            return lists.IsError
-                ? Results.Extensions.InternalServerError(lists.FirstError.Description)
-                : Results.Ok(lists.Value);
+            if (lists.IsError)
+            {
+                return lists.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(lists.FirstError.Description)
+                    : Results.Extensions.InternalServerError(lists.FirstError.Description);
+            }
+
+            return Results.Ok(lists.Value);
         });
 
         group.MapPost("/new", async (
@@ -34,21 +39,14 @@ public static class ItemListEndpoint
         {
             var userId = context.User.Id();
             var newList = await listCommandService.New(userId, newListModel);
-            return newList.IsError
-                ? Results.Extensions.InternalServerError(newList.FirstError.Description)
-                : Results.Text(newList.Value.Url);
-        });
+            if (newList.IsError)
+            {
+                return newList.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(newList.FirstError.Description)
+                    : Results.Extensions.InternalServerError(newList.FirstError.Description);
+            }
 
-        group.MapDelete("{url}/delete", async (
-            HttpContext context,
-            ListCommandService listCommandService,
-            string url) =>
-        {
-            var userId = context.User.Id();
-            var delete = await listCommandService.Delete(userId, url);
-            return delete.IsError
-                ? Results.Extensions.InternalServerError(delete.FirstError.Description)
-                : Results.Ok();
+            return Results.Text(newList.Value.Url);
         });
 
         group.MapGet("{url}", async (
@@ -57,7 +55,7 @@ public static class ItemListEndpoint
             string url) =>
         {
             var userId = context.User.Id();
-            var listResponse = await listCommandService.Get(userId, url);
+            var listResponse = await listCommandService.GetList(userId, url);
             if (listResponse.IsError)
             {
                 return listResponse.FirstError.Type == ErrorType.Unauthorized
@@ -67,6 +65,23 @@ public static class ItemListEndpoint
 
             return Results.Ok(listResponse.Value);
         }).AllowAnonymous();
+
+        group.MapDelete("{url}/delete", async (
+            HttpContext context,
+            ListCommandService listCommandService,
+            string url) =>
+        {
+            var userId = context.User.Id();
+            var buyItem = await listCommandService.DeleteList(userId, url);
+            if (buyItem.IsError)
+            {
+                return buyItem.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(buyItem.FirstError.Description)
+                    : Results.Extensions.InternalServerError(buyItem.FirstError.Description);
+            }
+
+            return Results.Ok();
+        });
 
         group.MapPost("{url}/buy-item", async (
             HttpContext context,
@@ -78,9 +93,14 @@ public static class ItemListEndpoint
         {
             var userId = context.User.Id();
             var buyItem = await listCommandService.BuyItem(userId, url, itemId, price, amount);
-            return buyItem.IsError
-                ? Results.Extensions.InternalServerError(buyItem.FirstError.Description)
-                : Results.Ok();
+            if (buyItem.IsError)
+            {
+                return buyItem.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(buyItem.FirstError.Description)
+                    : Results.Extensions.InternalServerError(buyItem.FirstError.Description);
+            }
+
+            return Results.Ok();
         });
 
         group.MapPost("{url}/sell-item", async (
@@ -93,9 +113,68 @@ public static class ItemListEndpoint
         {
             var userId = context.User.Id();
             var sellItem = await listCommandService.SellItem(userId, url, itemId, price, amount);
-            return sellItem.IsError
-                ? Results.Extensions.InternalServerError(sellItem.FirstError.Description)
-                : Results.Ok();
+            if (sellItem.IsError)
+            {
+                return sellItem.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(sellItem.FirstError.Description)
+                    : Results.Extensions.InternalServerError(sellItem.FirstError.Description);
+            }
+
+            return Results.Ok();
+        });
+
+        group.MapPut("{url}/update-name", async (
+            HttpContext context,
+            ListCommandService listCommandService,
+            string url,
+            [FromQuery] string newName) =>
+        {
+            var userId = context.User.Id();
+            var updateResult = await listCommandService.UpdateListName(userId, url, newName);
+            if (updateResult.IsError)
+            {
+                return updateResult.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(updateResult.FirstError.Description)
+                    : Results.Extensions.InternalServerError(updateResult.FirstError.Description);
+            }
+
+            return Results.Ok();
+        });
+
+        group.MapPut("{url}/update-description", async (
+            HttpContext context,
+            ListCommandService listCommandService,
+            string url,
+            [FromQuery] string newDescription) =>
+        {
+            var userId = context.User.Id();
+            var updateResult = await listCommandService.UpdateListDescription(userId, url, newDescription);
+            if (updateResult.IsError)
+            {
+                return updateResult.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(updateResult.FirstError.Description)
+                    : Results.Extensions.InternalServerError(updateResult.FirstError.Description);
+            }
+
+            return Results.Ok();
+        });
+
+        group.MapPut("{url}/update-public", async (
+            HttpContext context,
+            ListCommandService listCommandService,
+            string url,
+            [FromQuery] bool newPublic) =>
+        {
+            var userId = context.User.Id();
+            var updateResult = await listCommandService.UpdateListPublic(userId, url, newPublic);
+            if (updateResult.IsError)
+            {
+                return updateResult.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(updateResult.FirstError.Description)
+                    : Results.Extensions.InternalServerError(updateResult.FirstError.Description);
+            }
+
+            return Results.Ok();
         });
     }
 }

@@ -15,17 +15,18 @@ public class ListRazor : ComponentBase
 
     [Parameter, EditorRequired] public string ListUrl { get; set; } = null!;
 
-    protected Modal? ModalRef { get; set; }
-    protected ErrorComponent ErrorComponentRef = null!;
     protected ListResponse? List;
 
+    protected ListDisplay ListDisplayRef { get; set; } = null!;
+    protected Modal AddEntryModalRef { get; set; } = null!;
+    protected ItemSearchComponent AddEntrySearchComponentRef { get; set; } = null!;
 
-    private long? _addEntrySelectedItemId;
-    protected decimal? AddEntryPrice;
+    protected ErrorComponent ErrorComponentRef = null!;
+    protected string? ErrorMessage;
+
+
     protected long? AddEntryAmount;
-
-    protected bool OpenSellModal;
-    protected ListItemResponse? SellItem;
+    protected decimal? AddEntryPrice;
 
     protected override async Task OnInitializedAsync()
     {
@@ -46,58 +47,72 @@ public class ListRazor : ComponentBase
         StateHasChanged();
     }
 
-    protected Task AddEntryOnItemSelected(long itemId)
-    {
-        _addEntrySelectedItemId = itemId;
-        AddEntryAmount = 1;
-        AddEntryPrice = 0;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
     protected void OpenModalBuyEntry()
     {
-        SellItem = null;
+        ErrorMessage = null;
+        AddEntrySearchComponentRef.Reset();
         OpenNewEntryModal(true);
     }
 
     protected void OpenModalSellEntry(ListItemResponse item)
     {
-        SellItem = item;
+        ErrorMessage = null;
+        AddEntrySearchComponentRef.Reset(
+            new ItemSearchResponse(item.ItemId, item.ItemName, item.ItemImage),
+            true
+        );
         OpenNewEntryModal(false);
     }
 
-    protected void OpenNewEntryModal(bool buySell)
+    private void OpenNewEntryModal(bool buySell)
     {
-        if (ModalRef is null)
-        {
-            return;
-        }
-
+        AddEntryAmount = null;
+        AddEntryPrice = null;
         var buySellString = buySell ? "Buy" : "Sell";
-        ModalRef.Title = $"{buySellString}";
-        ModalRef.OkButtonString = ModalRef.Title;
-        ModalRef.OkButtonAction = async () =>
+        AddEntryModalRef.Title = $"{buySellString}";
+        AddEntryModalRef.OkButtonString = AddEntryModalRef.Title;
+        AddEntryModalRef.OkButtonAction = async () =>
         {
             var accessToken = AuthenticationStateProvider.Token?.AccessToken;
             if (string.IsNullOrWhiteSpace(accessToken))
             {
-                throw new Exception("Failed to add entry. No access token found");
+                ErrorMessage = "No access token found";
+                return;
             }
 
-            if (_addEntrySelectedItemId is null)
+            var selectedItem = AddEntrySearchComponentRef.SelectedItemSearchResponse;
+            var amount = AddEntryAmount;
+            var price = AddEntryPrice;
+            if (selectedItem is null)
             {
-                throw new Exception("Failed to add entry. No item selected");
+                ErrorMessage = "No item selected";
+                return;
             }
 
-            if (AddEntryPrice is null)
+            var itemInList = List?.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
+            if (itemInList is null)
             {
-                throw new Exception("Failed to add entry. No price entered");
+                ErrorMessage = "You can't sell an item you dont have";
+                return;
             }
 
-            if (AddEntryAmount is null)
+
+            if (amount is null or <= 0)
             {
-                throw new Exception("Failed to add entry. No amount entered");
+                ErrorMessage = "No amount entered";
+                return;
+            }
+
+            if (amount > itemInList.TotalBuyAmount - itemInList.TotalSellAmount)
+            {
+                ErrorMessage = "You can't sell more items than you have added to your list";
+                return;
+            }
+
+            if (price is null or <= 0)
+            {
+                ErrorMessage = "No price entered";
+                return;
             }
 
             if (buySell)
@@ -105,13 +120,14 @@ public class ListRazor : ComponentBase
                 var buyItem = await ItemTrackerApiService.BuyItem(
                     accessToken,
                     ListUrl,
-                    _addEntrySelectedItemId.Value,
-                    AddEntryPrice.Value,
-                    AddEntryAmount.Value
+                    selectedItem.Id,
+                    amount.Value,
+                    price.Value
                 );
                 if (buyItem.IsError)
                 {
-                    throw new Exception($"Failed to add entry. {buyItem.FirstError.Description}");
+                    ErrorMessage = $"{buyItem.FirstError.Description}";
+                    return;
                 }
             }
             else
@@ -119,21 +135,23 @@ public class ListRazor : ComponentBase
                 var sellItem = await ItemTrackerApiService.SellItem(
                     accessToken,
                     ListUrl,
-                    _addEntrySelectedItemId.Value,
-                    AddEntryPrice.Value,
-                    AddEntryAmount.Value
+                    selectedItem.Id,
+                    amount.Value,
+                    price.Value
                 );
                 if (sellItem.IsError)
                 {
-                    throw new Exception($"Failed to add entry. {sellItem.FirstError.Description}");
+                    ErrorMessage = $"{sellItem.FirstError.Description}";
+                    return;
                 }
             }
 
-            ModalRef.Close();
+            AddEntryModalRef.Close();
             await GetList();
+            await ListDisplayRef.RenderDiagram(List);
         };
 
-        ModalRef.Open();
+        AddEntryModalRef.Open();
     }
 
     protected async Task Delete(ListItemResponse item)

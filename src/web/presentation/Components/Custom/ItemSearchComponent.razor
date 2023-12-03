@@ -1,11 +1,11 @@
 ﻿@namespace presentation.Components.Custom
 @using Microsoft.AspNetCore.Authorization
-@inherits SearchComponentRazor
+@inherits ItemSearchComponentRazor
 
 @attribute [Authorize]
 
 <style>
-    .test {
+    .searchResults {
         z-index: 1100;
         overflow-y: scroll;
         overflow-x: hidden;
@@ -18,8 +18,19 @@
 </style>
 
 <div class="w-100">
-    <input class="form-control mb-2" placeholder="Type to search item..." @bind="CurrentSearchBoxContent" @oninput="OnInput" @onfocusin="ShowSearchResponses" @onfocusout="@HideSearchResponses">
-    <div @ref="SearchResponsesDivRef" class="position-fixed border border-2 border-light test @HideSearchResponsesClass">
+    <div class="row w-100 m-0 p-0 mb-2">
+        <InputText
+            class="form-control text-center"
+            disabled="@LockInput"
+            @ref="InputRef"
+            ValueExpression="() => HideSearchResponsesClass"
+            placeholder="Type to search item..."
+            @oninput="OnInput"
+            @onfocusin="ShowSearchResponses"
+            @onfocusout="HideSearchResponses"/>
+    </div>
+
+    <div class="position-fixed border border-2 border-light searchResults @HideSearchResponsesClass">
         @foreach (var searchResult in ItemSearchResponses)
         {
             <div class="row">

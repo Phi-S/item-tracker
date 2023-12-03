@@ -81,8 +81,8 @@ public partial class ItemTrackerApiService
         string accessToken,
         string listUrl,
         long itemId,
-        decimal price,
-        long amount)
+        long amount,
+        decimal price)
     {
         var uri = new Uri($"{_apiEndpointUrl}/list/{listUrl}/buy-item");
         uri = uri.AddParameter("itemId", itemId.ToString());
@@ -102,8 +102,8 @@ public partial class ItemTrackerApiService
         string accessToken,
         string listUrl,
         long itemId,
-        decimal price,
-        long amount)
+        long amount,
+        decimal price)
     {
         var uri = new Uri($"{_apiEndpointUrl}/list/{listUrl}/sell-item");
         uri = uri.AddParameter("itemId", itemId.ToString());

@@ -4,8 +4,11 @@ using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
 using infrastructure.Items;
 using infrastructure.Mapper;
+using OneOf.Types;
 using shared.Models;
 using shared.Models.ListResponse;
+using Error = ErrorOr.Error;
+using Success = ErrorOr.Success;
 
 namespace application.Commands;
 
@@ -24,7 +27,6 @@ public class ListCommandService
         _itemListValueRepo = itemListValueRepo;
         _itemsService = itemsService;
     }
-
 
     public async Task<ErrorOr<List<ListResponse>>> GetAllForUser(string? userId)
     {
@@ -88,7 +90,7 @@ public class ListCommandService
         return listResponse;
     }
 
-    public async Task<ErrorOr<ListResponse>> Get(string? userId, string listUrl)
+    public async Task<ErrorOr<ListResponse>> GetList(string? userId, string listUrl)
     {
         var list = await _itemListRepo.GetByUrl(listUrl);
         if (list.IsError)
@@ -110,25 +112,25 @@ public class ListCommandService
         return listResponse;
     }
 
-    public async Task<ErrorOr<Deleted>> Delete(string? userId, string listUrl)
+    public async Task<ErrorOr<Deleted>> DeleteList(string? userId, string listUrl)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
             return Error.Unauthorized("UserId not found");
         }
 
-        var listToDelete = await _itemListRepo.GetByUrl(listUrl);
-        if (listToDelete.IsError)
+        var list = await _itemListRepo.GetByUrl(listUrl);
+        if (list.IsError)
         {
-            return listToDelete.FirstError;
+            return list.FirstError;
         }
 
-        if (listToDelete.Value.UserId.Equals(userId) == false)
+        if (list.Value.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(description: "You dont have access to this list");
         }
 
-        await _itemListRepo.Delete(listToDelete.Value.Id);
+        await _itemListRepo.DeleteList(list.Value.Id);
         return Result.Deleted;
     }
 
@@ -172,7 +174,8 @@ public class ListCommandService
             return Error.Unauthorized("UserId not found");
         }
 
-        var list = await _itemListRepo.GetByUrl(listUrl);
+        //TODO: can be optimized so you dont have to call the database multiple times
+        var list = await GetList(userId, listUrl);
         if (list.IsError)
         {
             return list.FirstError;
@@ -183,12 +186,30 @@ public class ListCommandService
             return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
-        await _itemListRepo.AddItemAction("S", list.Value, itemId, price, amount);
-        await _itemListValueRepo.CalculateLatest(list.Value);
+        var itemsInList = list.Value.Items.FirstOrDefault(item => item.ItemId == itemId);
+        if (itemsInList is null)
+        {
+            return Error.Conflict($"The list \"{listUrl}\" dose not contain an item with the id \"{itemId}\"");
+        }
+
+        if (amount > itemsInList.TotalBuyAmount - itemsInList.TotalSellAmount)
+        {
+            return Error.Conflict(
+                $"The list \"{listUrl}\" dose not contain enough item with the id \"{itemId}\" to sell {amount} items");
+        }
+
+        var listDbModel = await _itemListRepo.GetByUrl(listUrl);
+        if (listDbModel.IsError)
+        {
+            return listDbModel.FirstError;
+        }
+
+        await _itemListRepo.AddItemAction("S", listDbModel.Value, itemId, price, amount);
+        await _itemListValueRepo.CalculateLatest(listDbModel.Value);
         return Result.Created;
     }
 
-    public async Task<ErrorOr<Deleted>> DeleteItemAction(string? userId, string listUrl, long itemActionId)
+    public async Task<ErrorOr<Updated>> UpdateListName(string? userId, string listUrl, string newName)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -206,8 +227,51 @@ public class ListCommandService
             return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
-        await _itemListRepo.DeleteItem(itemActionId);
-        await _itemListValueRepo.CalculateLatest(list.Value);
-        return Result.Deleted;
+        await _itemListRepo.UpdateName(list.Value.Id, newName);
+        return Result.Updated;
+    }
+
+    public async Task<ErrorOr<Updated>> UpdateListDescription(string? userId, string listUrl, string newDescription)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+
+        var list = await _itemListRepo.GetByUrl(listUrl);
+        if (list.IsError)
+        {
+            return list.FirstError;
+        }
+
+        if (list.Value.UserId.Equals(userId) == false)
+        {
+            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+        }
+
+        await _itemListRepo.UpdateDescription(list.Value.Id, newDescription);
+        return Result.Updated;
+    }
+
+    public async Task<ErrorOr<Updated>> UpdateListPublic(string? userId, string listUrl, bool newPublic)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Error.Unauthorized("UserId not found");
+        }
+
+        var list = await _itemListRepo.GetByUrl(listUrl);
+        if (list.IsError)
+        {
+            return list.FirstError;
+        }
+
+        if (list.Value.UserId.Equals(userId) == false)
+        {
+            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+        }
+
+        await _itemListRepo.UpdatePublic(list.Value.Id, newPublic);
+        return Result.Updated;
     }
 }
