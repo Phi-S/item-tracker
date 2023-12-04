@@ -1,87 +1,113 @@
-﻿using System.Globalization;
+﻿using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ErrorOr;
+using Error = ErrorOr.Error;
 
 namespace infrastructure.ItemPriceFolder;
 
 public class ItemPriceService
 {
     private readonly HttpClient _httpClient;
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
     public ItemPriceService(HttpClient httpClient)
     {
         _httpClient = httpClient;
     }
 
-    public async Task<ErrorOr<List<PriceModel>>> GetPrices()
+    public async Task<ErrorOr<(ProviderPricesModel steamPrices, ProviderPricesModel buff163Prices)>> GetPrices()
     {
-        var steamPricesJson = await GetPricesJson();
-        var priceModelsFromJson = GetPriceModelsFromJson(steamPricesJson);
-        return priceModelsFromJson;
+        var steamPricesTask = GetSteamPrices();
+        var buffPricesTask = GetBuffPrices();
+        await Task.WhenAll(steamPricesTask, buffPricesTask);
+        var steamPricesResult = steamPricesTask.Result;
+        if (steamPricesResult.IsError)
+        {
+            return steamPricesResult.FirstError;
+        }
+
+        var buffPricesResult = buffPricesTask.Result;
+        if (buffPricesResult.IsError)
+        {
+            return buffPricesResult.FirstError;
+        }
+        
+        return (steamPricesResult.Value, buffPricesResult.Value);
     }
 
-    private async Task<string> GetPricesJson()
+    private async Task<ErrorOr<ProviderPricesModel>> GetSteamPrices()
     {
-        var gzipStream = await _httpClient.GetStreamAsync(
-            "https://prices.csgotrader.app/latest/prices_v6.json");
+        var pricesResponse = await GetPricesJson("steam");
+        var prices =
+            JsonSerializer.Deserialize<Dictionary<string, JsonObject>>(pricesResponse.json, JsonSerializerOptions);
+        if (prices is null)
+        {
+            return Error.Failure("Failed to Deserialize price json");
+        }
+
+        var result = new List<(string itemName, decimal? price)>();
+        foreach (var (name, priceJson) in prices)
+        {
+            var price = GetSteamPriceFromJson(priceJson);
+            if (price.IsError)
+            {
+                return price.FirstError;
+            }
+
+            result.Add((name, price.Value));
+        }
+
+        return new ProviderPricesModel(pricesResponse.lastModified, result);
+    }
+
+    private async Task<ErrorOr<ProviderPricesModel>> GetBuffPrices()
+    {
+        var pricesResponse = await GetPricesJson("buff163");
+        var prices =
+            JsonSerializer.Deserialize<Dictionary<string, JsonObject>>(pricesResponse.json, JsonSerializerOptions);
+        if (prices is null)
+        {
+            return Error.Failure("Failed to Deserialize price json");
+        }
+
+        var result = new List<(string itemName, decimal? price)>();
+        foreach (var (name, priceJson) in prices)
+        {
+            var price = GetBuffPriceModelFromJson(priceJson);
+            if (price.IsError)
+            {
+                return price.FirstError;
+            }
+
+            result.Add((name, price.Value));
+        }
+
+        return new ProviderPricesModel(pricesResponse.lastModified, result);
+    }
+
+    private async Task<(DateTime lastModified, string json)> GetPricesJson(string provider)
+    {
+        var response = await _httpClient.GetAsync($"https://prices.csgotrader.app/latest/{provider}.json");
+        var lastModifiedString = response.Content.Headers
+            .First(pair => pair.Key.Equals("last-modified", StringComparison.InvariantCultureIgnoreCase)).Value.First();
+        var lastModified = DateTime.Parse(lastModifiedString).ToUniversalTime();
+        var gzipStream = await response.Content.ReadAsStreamAsync();
 
         await using var zipStream = new GZipStream(gzipStream, CompressionMode.Decompress);
         using var resultStream = new MemoryStream();
         await zipStream.CopyToAsync(resultStream);
         var resultBytes = resultStream.ToArray();
         var resultJson = Encoding.UTF8.GetString(resultBytes);
-        return resultJson;
+        return (lastModified, resultJson);
     }
 
-    private static ErrorOr<List<PriceModel>>
-        GetPriceModelsFromJson(string json)
+    private static ErrorOr<decimal?> GetSteamPriceFromJson(JsonNode jsonObject)
     {
-        var result = new List<PriceModel>();
-        var prices = JsonSerializer.Deserialize<Dictionary<string, JsonObject>>(json,
-            new JsonSerializerOptions(JsonSerializerDefaults.Web));
-        if (prices is null)
-        {
-            return Error.Failure("Failed to Deserialize price json");
-        }
-
-        foreach (var (name, priceJson) in prices)
-        {
-            var steamPrice = GetSteamPriceModelFromJson(priceJson);
-            if (steamPrice.IsError)
-            {
-                return Error.Failure(
-                    description:
-                    $"Failed to get steam price for item \"{name}\". {steamPrice.FirstError} | raw json: \\n {priceJson.ToJsonString()}\"");
-            }
-
-            var buffPrice = GetBuffPriceModelFromJson(priceJson);
-            if (buffPrice.IsError)
-            {
-                return Error.Failure(
-                    description:
-                    $"Failed to get buff price for item \"{name}\". {buffPrice.FirstError} | raw json: \\n {priceJson.ToJsonString()}\"");
-            }
-
-            var price = new PriceModel(name, steamPrice.Value, buffPrice.Value);
-            result.Add(price);
-        }
-
-        return result;
-    }
-
-    private static ErrorOr<decimal?> GetSteamPriceModelFromJson(JsonNode jsonObject)
-    {
-        var steamPriceJson = jsonObject["steam"];
-        if (steamPriceJson is null)
-        {
-            return Error.Failure(description:
-                $"Item dose not have an steam price part in json. Json: {jsonObject.ToJsonString()}");
-        }
-
-        var steamPriceLast24H = GetSteamPrice(steamPriceJson, "last_24h");
+        var steamPriceLast24H = GetSteamPrice(jsonObject, "last_24h");
         if (steamPriceLast24H.IsError)
         {
             return steamPriceLast24H.FirstError;
@@ -92,7 +118,7 @@ public class ItemPriceService
             return steamPriceLast24H.Value.Value;
         }
 
-        var steamPriceLast7d = GetSteamPrice(steamPriceJson, "last_7d");
+        var steamPriceLast7d = GetSteamPrice(jsonObject, "last_7d");
         if (steamPriceLast7d.IsError)
         {
             return steamPriceLast7d.FirstError;
@@ -103,7 +129,7 @@ public class ItemPriceService
             return steamPriceLast7d.Value.Value;
         }
 
-        var steamPriceLast30d = GetSteamPrice(steamPriceJson, "last_30d");
+        var steamPriceLast30d = GetSteamPrice(jsonObject, "last_30d");
         if (steamPriceLast30d.IsError)
         {
             return steamPriceLast30d.FirstError;
@@ -114,7 +140,7 @@ public class ItemPriceService
             return steamPriceLast30d.Value.Value;
         }
 
-        var steamPriceLast90d = GetSteamPrice(steamPriceJson, "last_90d");
+        var steamPriceLast90d = GetSteamPrice(jsonObject, "last_90d");
         if (steamPriceLast90d.IsError)
         {
             return steamPriceLast90d.FirstError;
@@ -172,25 +198,17 @@ public class ItemPriceService
                 }
             }
 
-
             var priceString = jsonNode[jsonPropertyName]?["price"]?.ToString();
             if (string.IsNullOrWhiteSpace(priceString) ||
                 decimal.TryParse(priceString, NumberStyles.Float, CultureInfo.InvariantCulture, out var price) == false)
             {
-                return Error.Failure($"Item dose not have steam price for \"{jsonPropertyName}\"");
+                return Error.Failure($"Item dose not have buff price for \"{jsonPropertyName}\"");
             }
 
             return price;
         }
 
-        var buffPriceJson = jsonObject["buff163"];
-        if (buffPriceJson is null)
-        {
-            return Error.Failure(description:
-                $"Item dose not have an buff price part in json. Json: {jsonObject.ToJsonString()}");
-        }
-
-        var buffPriceStartingAt = GetBuffPrice(buffPriceJson, "starting_at");
+        var buffPriceStartingAt = GetBuffPrice(jsonObject, "starting_at");
         if (buffPriceStartingAt.IsError)
         {
             return buffPriceStartingAt.FirstError;
@@ -201,7 +219,7 @@ public class ItemPriceService
             return buffPriceStartingAt.Value.Value;
         }
 
-        var buffPriceHighestOrder = GetBuffPrice(buffPriceJson, "highest_order");
+        var buffPriceHighestOrder = GetBuffPrice(jsonObject, "highest_order");
         if (buffPriceHighestOrder.IsError)
         {
             return buffPriceHighestOrder.FirstError;

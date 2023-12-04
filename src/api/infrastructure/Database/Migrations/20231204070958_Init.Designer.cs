@@ -12,8 +12,8 @@ using infrastructure.Database;
 namespace infrastructure.Database.Migrations
 {
     [DbContext(typeof(XDbContext))]
-    [Migration("20231202001212_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20231204070958_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -89,8 +89,8 @@ namespace infrastructure.Database.Migrations
                         .HasMaxLength(1)
                         .HasColumnType("character varying(1)");
 
-                    b.Property<long>("Amount")
-                        .HasColumnType("bigint");
+                    b.Property<int>("Amount")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
@@ -111,7 +111,7 @@ namespace infrastructure.Database.Migrations
                     b.ToTable("ItemListItemAction");
                 });
 
-            modelBuilder.Entity("infrastructure.Database.Models.ItemListValueDbModel", b =>
+            modelBuilder.Entity("infrastructure.Database.Models.ItemListSnapshotDbModel", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -128,7 +128,10 @@ namespace infrastructure.Database.Migrations
                     b.Property<decimal>("InvestedCapital")
                         .HasColumnType("numeric");
 
-                    b.Property<long?>("ItemPriceRefreshId")
+                    b.Property<int>("ItemCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ItemPriceRefreshId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("ListId")
@@ -154,10 +157,10 @@ namespace infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<decimal?>("BuffPriceEur")
+                    b.Property<decimal?>("Buff163PriceEur")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal?>("BuffPriceUsd")
+                    b.Property<decimal?>("Buff163PriceUsd")
                         .HasColumnType("numeric");
 
                     b.Property<long>("ItemId")
@@ -187,7 +190,13 @@ namespace infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<DateTime>("Buff163PricesLastModified")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("SteamPricesLastModified")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -206,11 +215,13 @@ namespace infrastructure.Database.Migrations
                     b.Navigation("List");
                 });
 
-            modelBuilder.Entity("infrastructure.Database.Models.ItemListValueDbModel", b =>
+            modelBuilder.Entity("infrastructure.Database.Models.ItemListSnapshotDbModel", b =>
                 {
                     b.HasOne("infrastructure.Database.Models.ItemPriceRefreshDbModel", "ItemPriceRefresh")
                         .WithMany()
-                        .HasForeignKey("ItemPriceRefreshId");
+                        .HasForeignKey("ItemPriceRefreshId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("infrastructure.Database.Models.ItemListDbModel", "List")
                         .WithMany()

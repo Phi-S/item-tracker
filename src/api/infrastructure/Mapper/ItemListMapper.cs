@@ -9,7 +9,7 @@ public static class ItemListMapper
 {
     public static ErrorOr<ListResponse> MapToListResponse(
         ItemListDbModel itemListDbModel,
-        List<ItemListValueDbModel> itemListValues,
+        List<ItemListSnapshotDbModel> itemListValues,
         List<ItemListItemActionDbModel> itemListItemActions,
         ItemsService itemsService)
     {
@@ -25,57 +25,69 @@ public static class ItemListMapper
             var itemInfo = itemInfoResult.Value;
             var itemActions = new List<ListItemActionResponse>();
             var buyActions = new List<ListItemActionResponse>();
+            var buyPrices = new List<decimal>();
             var sellActions = new List<ListItemActionResponse>();
-            foreach (var itemListItemAction in itemListItemActionsGroup)
+            var currentAmountInvested = 0;
+            foreach (var itemAction in itemListItemActionsGroup.OrderBy(action => action.CreatedUtc))
             {
-                var action = new ListItemActionResponse(
-                    itemListItemAction.Id,
-                    itemListItemAction.Action,
-                    itemListItemAction.Amount,
-                    itemListItemAction.PricePerOne,
-                    itemListItemAction.CreatedUtc
+                var actionResponse = new ListItemActionResponse(
+                    itemAction.Id,
+                    itemAction.Action,
+                    itemAction.Amount,
+                    itemAction.PricePerOne,
+                    itemAction.CreatedUtc
                 );
-                itemActions.Add(action);
-                if (itemListItemAction.Action.Equals("B"))
+                itemActions.Add(actionResponse);
+                if (itemAction.Action.Equals("B"))
                 {
-                    buyActions.Add(action);
+                    // Clears buyPrices so all actions before the entire amount of one item is sold is not used to calculate the averageBuyPrice
+                    // Example: if not corrected:
+                    // buy 5 for 1; avg buy price 1;
+                    // sell 5 fox x; avg buy price 1;
+                    // buy 5 for 2; avg buy price == 1.5 / because 15 / 10 insted of 10 / 5
+                    // corrected:
+                    // buy 5 for 1; avg buy price 1;
+                    // sell 5 fox x; avg buy price 0;
+                    // buy 5 for 2; avg buy price == 2
+                    if (currentAmountInvested == 0)
+                    {
+                        buyPrices.Clear();
+                    }
+
+                    buyPrices.AddRange(Enumerable.Repeat(actionResponse.Price, actionResponse.Amount));
+                    buyActions.Add(actionResponse);
+                    currentAmountInvested += actionResponse.Amount;
                 }
-                else if (itemListItemAction.Action.Equals("S"))
+                else if (itemAction.Action.Equals("S"))
                 {
-                    sellActions.Add(action);
+                    sellActions.Add(actionResponse);
+                    currentAmountInvested -= actionResponse.Amount;
                 }
             }
 
-            var totalBuyAmount = buyActions.Sum(action => action.Amount);
-            var totalBuyPrice = buyActions.Sum(action => action.Amount * action.PricePerOne);
-            var averageBuyPrice = totalBuyAmount == 0 ? 0 : totalBuyPrice / totalBuyAmount;
-
-            var totalSellAmount = sellActions.Sum(action => action.Amount);
-            var totalSellPrice = buyActions.Sum(action => action.Amount * action.PricePerOne);
-            var averageSellPrice = totalSellAmount == 0 ? 0 : totalSellPrice / totalSellAmount;
+            var currentAverageBuyPrice = buyPrices.Average();
+            var currentCapitalInvested = currentAverageBuyPrice * currentAmountInvested;
 
             var item = new ListItemResponse(
                 itemInfo.Id,
                 itemInfo.Name,
                 itemInfo.Image,
-                totalBuyAmount,
-                totalBuyPrice,
-                averageBuyPrice,
-                totalSellAmount,
-                totalSellPrice,
-                averageSellPrice,
+                currentCapitalInvested,
+                currentAmountInvested,
+                currentAverageBuyPrice,
                 itemActions
             );
             items.Add(item);
         }
 
-        var listValues = new List<ListValueResponse>();
+        var listValues = new List<ListSnapshotResponse>();
         foreach (var itemListValue in itemListValues)
         {
-            var listValue = new ListValueResponse(
+            var listValue = new ListSnapshotResponse(
+                itemListValue.InvestedCapital,
+                itemListValue.ItemCount,
                 itemListValue.SteamValue,
                 itemListValue.BuffValue,
-                itemListValue.InvestedCapital,
                 itemListValue.CreatedUtc
             );
             listValues.Add(listValue);

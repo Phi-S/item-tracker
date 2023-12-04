@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using presentation.BlazorExtensions;
 using shared.Models.ListResponse;
+using Throw;
 
 namespace presentation.Components.Custom;
 
@@ -24,7 +25,9 @@ public class ListDisplayRazor : ComponentBase
         }
     }
 
-    public async Task RenderDiagram(ListResponse listResponse)
+    public async
+        Task<(ChartData chartData, LineChartOptionsExtension lineChartOptionsExtension)> GetDiagramData(
+            ListResponse listResponse)
     {
         var timezoneOffsetH = await JsRuntime.GetBrowserTimezoneOffsetInH();
 
@@ -39,7 +42,7 @@ public class ListDisplayRazor : ComponentBase
             {
                 dataLabels.Add(listValue.CreatedAt.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
                 steamPriceValues.Add((double)(listValue.SteamValue ?? 0));
-                buffPriceValues.Add((double)(listValue.BuffValue ?? 0));
+                buffPriceValues.Add((double)(listValue.Buff163Value ?? 0));
                 investedCapitalValues.Add((double)listValue.InvestedCapital);
             }
         }
@@ -117,18 +120,47 @@ public class ListDisplayRazor : ComponentBase
             }
         };
 
+
+        return (chartData, lineChartOptions);
+    }
+
+    private async Task RenderDiagram(ListResponse listResponse)
+    {
+        var diagramData = await GetDiagramData(listResponse);
+        diagramData.chartData.Datasets.ThrowIfNull();
+
         var data = new
         {
-            chartData.Labels,
-            Datasets = chartData.Datasets.OfType<LineChartDataset>()
+            diagramData.chartData.Labels,
+            Datasets = diagramData.chartData.Datasets.OfType<LineChartDataset>()
         };
+
         await JsRuntime.InvokeVoidAsync(
             "window.blazorChart.line.initialize",
             LineChart.ElementId!,
             "line",
             data,
-            lineChartOptions,
+            diagramData.lineChartOptionsExtension,
             null
+        );
+        StateHasChanged();
+    }
+
+    public async Task UpdateDiagram(ListResponse listResponse)
+    {
+        var diagramData = await GetDiagramData(listResponse);
+        diagramData.chartData.Datasets.ThrowIfNull();
+        var data = new
+        {
+            Labels = diagramData.chartData.Labels,
+            Datasets = diagramData.chartData.Datasets.OfType<LineChartDataset>()
+        };
+        await JsRuntime.InvokeVoidAsync(
+            "window.blazorChart.line.update",
+            LineChart.ElementId!,
+            "line",
+            data,
+            diagramData.lineChartOptionsExtension
         );
         StateHasChanged();
     }

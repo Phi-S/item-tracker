@@ -2,6 +2,7 @@ using System.Diagnostics;
 using application.Commands;
 using infrastructure.Database;
 using infrastructure.Database.Models;
+using infrastructure.Items;
 using Microsoft.Extensions.DependencyInjection;
 using TestHelper.TestSetup;
 using Xunit.Abstractions;
@@ -26,7 +27,6 @@ public class PriceCommandServiceTests
         await using var provider = serviceCollection.BuildServiceProvider();
 
         var dbContext = provider.GetRequiredService<XDbContext>();
-
         var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
         {
             UserId = "test_user",
@@ -78,6 +78,7 @@ public class PriceCommandServiceTests
         });
         await dbContext.SaveChangesAsync();
 
+        var itemsService = provider.GetRequiredService<ItemsService>();
         var priceCommandService = provider.GetRequiredService<PriceCommandService>();
         var sw = Stopwatch.StartNew();
         var refreshItemPrices = await priceCommandService.RefreshItemPrices();
@@ -85,15 +86,20 @@ public class PriceCommandServiceTests
         {
             Assert.Fail(refreshItemPrices.FirstError.Description);
         }
+
         sw.Stop();
 
         var itemPricesCount = dbContext.ItemPrices.Count();
-        if (itemPricesCount <= 0)
+        Assert.True(itemPricesCount > 0, $"{itemPricesCount} item prices added to database");
+        _outputHelper.WriteLine($"{itemPricesCount} item prices added to database");
+
+        var allItems = itemsService.GetAll();
+        if (allItems.IsError)
         {
-            Assert.Fail($"{itemPricesCount} item prices added to database");
+            Assert.Fail(allItems.FirstError.Description);
         }
 
-        _outputHelper.WriteLine($"{itemPricesCount} item prices added to database");
+        Assert.True(allItems.Value.Count == itemPricesCount, "Not all items got prices");
 
         var listValue = dbContext.ItemListValues.Where(listValue => listValue.List.Id == list.Entity.Id).ToList();
         if (listValue.Count == 0)
@@ -106,7 +112,7 @@ public class PriceCommandServiceTests
             Assert.Fail($"Multiple list values found ({listValue.Count})");
         }
 
-        _outputHelper.WriteLine($"priceCommandService.RefreshItemPrices duration: {sw.ElapsedMilliseconds}");
+        _outputHelper.WriteLine($"RefreshItemPrices duration: {sw.ElapsedMilliseconds}");
         Assert.True(true);
     }
 }

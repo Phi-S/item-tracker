@@ -17,6 +17,6 @@ public record ListResponse(
     string UserId,
     [property: JsonRequired, JsonPropertyName("items")]
     List<ListItemResponse> Items,
-    [property: JsonRequired, JsonPropertyName("listValues")]
-    List<ListValueResponse> ListValues
+    [property: JsonRequired, JsonPropertyName("list_values")]
+    List<ListSnapshotResponse> ListValues
 );

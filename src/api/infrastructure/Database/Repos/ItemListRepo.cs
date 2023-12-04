@@ -6,7 +6,7 @@ namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
-    public async Task<List<Tuple<ItemListDbModel, List<ItemListValueDbModel>, List<ItemListItemActionDbModel>>>>
+    public async Task<List<Tuple<ItemListDbModel, List<ItemListSnapshotDbModel>, List<ItemListItemActionDbModel>>>>
         GetListInfosForUserId(string userId)
     {
         var result =
@@ -19,7 +19,7 @@ public class ItemListRepo(XDbContext dbContext)
         return await Task.FromResult(result);
     }
 
-    public (ItemListDbModel list, List<ItemListValueDbModel> listValues, List<ItemListItemActionDbModel> items)
+    public (ItemListDbModel list, List<ItemListSnapshotDbModel> listValues, List<ItemListItemActionDbModel> items)
         GetListInfos(long listId)
     {
         var result =
@@ -49,7 +49,7 @@ public class ItemListRepo(XDbContext dbContext)
         return list;
     }
 
-    public async Task<ItemListDbModel> New(
+    public async Task<ItemListDbModel> CreateNewList(
         string userId,
         string listName,
         string? listDescription,
@@ -87,12 +87,36 @@ public class ItemListRepo(XDbContext dbContext)
         await dbContext.SaveChangesAsync();
     }
 
-    public async Task<ItemListItemActionDbModel> AddItemAction(
-        string actionType,
+    public async Task<int> GetCurrentItemCount(ItemListDbModel list, long itemId)
+    {
+        var actionsForItemId = dbContext.ItemListItemAction
+            .Where(action => action.List.Id == list.Id && action.ItemId == itemId).OrderBy(action => action.CreatedUtc);
+        var itemCount = 0;
+        foreach (var action in actionsForItemId)
+        {
+            if (action.Action.Equals("B"))
+            {
+                itemCount += action.Amount;
+            }
+            else if (action.Action.Equals("S"))
+            {
+                itemCount -= action.Amount;
+            }
+        }
+
+        if (itemCount < 0)
+        {
+            throw new Exception($"Item count cant be negative. ItemCount: {itemCount}");
+        }
+
+        return await Task.FromResult(itemCount);
+    }
+
+    public async Task AddItemAction(string actionType,
         ItemListDbModel list,
         long itemId,
         decimal pricePerOne,
-        long amount)
+        int amount)
     {
         if (string.IsNullOrWhiteSpace(actionType) ||
             (actionType.Equals("B") == false && actionType.Equals("S") == false))
@@ -110,9 +134,8 @@ public class ItemListRepo(XDbContext dbContext)
             Amount = amount,
             CreatedUtc = currentDate
         };
-        var addedItem = await dbContext.ItemListItemAction.AddAsync(listItem);
+        await dbContext.ItemListItemAction.AddAsync(listItem);
         await dbContext.SaveChangesAsync();
-        return addedItem.Entity;
     }
 
     public async Task UpdateName(long listId, string newListName)

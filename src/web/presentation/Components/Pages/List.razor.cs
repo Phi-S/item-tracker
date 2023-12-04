@@ -10,7 +10,6 @@ namespace presentation.Components.Pages;
 public class ListRazor : ComponentBase
 {
     [Inject] private CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
-    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
     [Inject] private ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
 
     [Parameter, EditorRequired] public string ListUrl { get; set; } = null!;
@@ -89,23 +88,9 @@ public class ListRazor : ComponentBase
                 return;
             }
 
-            var itemInList = List?.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
-            if (itemInList is null)
-            {
-                ErrorMessage = "You can't sell an item you dont have";
-                return;
-            }
-
-
             if (amount is null or <= 0)
             {
                 ErrorMessage = "No amount entered";
-                return;
-            }
-
-            if (amount > itemInList.TotalBuyAmount - itemInList.TotalSellAmount)
-            {
-                ErrorMessage = "You can't sell more items than you have added to your list";
                 return;
             }
 
@@ -132,6 +117,19 @@ public class ListRazor : ComponentBase
             }
             else
             {
+                var itemInList = List?.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
+                if (itemInList is null)
+                {
+                    ErrorMessage = "You can't sell an item you dont have";
+                    return;
+                }
+
+                if (amount > itemInList.CurrentAmountInvested)
+                {
+                    ErrorMessage = "You can't sell more items than the list contains";
+                    return;
+                }
+
                 var sellItem = await ItemTrackerApiService.SellItem(
                     accessToken,
                     ListUrl,
@@ -148,14 +146,9 @@ public class ListRazor : ComponentBase
 
             AddEntryModalRef.Close();
             await GetList();
-            await ListDisplayRef.RenderDiagram(List);
+            await ListDisplayRef.UpdateDiagram(List!);
         };
 
         AddEntryModalRef.Open();
-    }
-
-    protected async Task Delete(ListItemResponse item)
-    {
-        // TODO: implement delete...
     }
 }

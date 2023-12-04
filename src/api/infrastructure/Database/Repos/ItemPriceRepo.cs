@@ -4,10 +4,13 @@ namespace infrastructure.Database.Repos;
 
 public class ItemPriceRepo(XDbContext dbContext)
 {
-    public async Task<ItemPriceRefreshDbModel> CreateNew()
+    public async Task<ItemPriceRefreshDbModel> CreateNew(DateTime steamPricesLastModified, DateTime buff163PricesLastModified)
     {
-        var newItemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel
+        var newItemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(
+            new ItemPriceRefreshDbModel
         {
+            SteamPricesLastModified = steamPricesLastModified,
+            Buff163PricesLastModified = buff163PricesLastModified,
             CreatedUtc = DateTime.UtcNow
         });
         await dbContext.SaveChangesAsync();

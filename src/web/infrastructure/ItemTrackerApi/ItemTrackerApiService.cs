@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using ErrorOr;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using shared.Models;
 using Throw;
 
 namespace infrastructure.ItemTrackerApi;
@@ -13,32 +15,42 @@ public partial class ItemTrackerApiService
 
     private readonly string _apiEndpointUrl;
     private readonly HttpClient _httpClient;
+    private readonly ILogger<ItemTrackerApiService> _logger;
 
-    public ItemTrackerApiService(IConfiguration configuration, HttpClient httpClient)
+    public ItemTrackerApiService(
+        IConfiguration configuration,
+        HttpClient httpClient,
+        ILogger<ItemTrackerApiService> logger)
     {
         var apiEndpointUrl = configuration.GetValue<string>("ITEM_TRACKER_API_ENDPOINT");
         apiEndpointUrl.ThrowIfNull().IfEmpty().IfWhiteSpace();
 
         _apiEndpointUrl = apiEndpointUrl;
         _httpClient = httpClient;
+        _logger = logger;
     }
-    
-    private async Task<ErrorOr<string>> DeleteWithAuthAsync(string url, string accessToken)
+
+    private async Task<ErrorOr<string>> DeleteWithAuthAsync(string url, string? accessToken)
     {
         return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Delete, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> GetWithAuthAsync(string url, string accessToken)
+    private async Task<ErrorOr<string>> PutWithAuthAsync(string url, string? accessToken)
+    {
+        return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Put, url), accessToken);
+    }
+
+    private async Task<ErrorOr<string>> GetWithAuthAsync(string url, string? accessToken)
     {
         return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Get, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> PostWithAuthAsync(string url, string accessToken)
+    private async Task<ErrorOr<string>> PostWithAuthAsync(string url, string? accessToken)
     {
         return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Post, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> PostWithAuthAsync(string url, HttpContent content, string accessToken)
+    private async Task<ErrorOr<string>> PostWithAuthAsync(string url, HttpContent content, string? accessToken)
     {
         var request = new HttpRequestMessage(
             HttpMethod.Post,
@@ -48,8 +60,13 @@ public partial class ItemTrackerApiService
         return await SendWithAuthAsync(request, accessToken);
     }
 
-    private async Task<ErrorOr<string>> SendWithAuthAsync(HttpRequestMessage requestMessage, string accessToken)
+    private async Task<ErrorOr<string>> SendWithAuthAsync(HttpRequestMessage requestMessage, string? accessToken)
     {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            return Error.Unauthorized(description: "Access token is not valid");
+        }
+
         requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         return await SendAsync(requestMessage);
     }
@@ -61,18 +78,33 @@ public partial class ItemTrackerApiService
 
     private async Task<ErrorOr<string>> SendAsync(HttpRequestMessage requestMessage)
     {
-        requestMessage.Headers.Add("accept", "application/json");
-        requestMessage.Headers.Add("Access-Control-Request-Headers", "content-type");
-        var response = await _httpClient.SendAsync(requestMessage);
-        if (response.IsSuccessStatusCode == false)
+        try
         {
-            return response.StatusCode == HttpStatusCode.Unauthorized
-                ? Error.Unauthorized()
-                : Error.Failure($"Request failed with status code {response.StatusCode}");
-        }
+            requestMessage.Headers.Add("accept", "application/json");
+            requestMessage.Headers.Add("Access-Control-Request-Headers", "content-type");
+            var response = await _httpClient.SendAsync(requestMessage);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var message = $"Request failed with status code {response.StatusCode}";
+                var responseContentAsString = await response.Content.ReadAsStringAsync();
+                var errorResponseModel = JsonSerializer.Deserialize<ApiErrorResponseModel>(responseContentAsString);
+                if (errorResponseModel is null)
+                {
+                    return Error.Failure(description: message);
+                }
 
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        return json;
+                return response.StatusCode == HttpStatusCode.Unauthorized
+                    ? Error.Unauthorized(description: $"{errorResponseModel.Message}")
+                    : Error.Failure(description: $"{errorResponseModel.Message}");
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            return json;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Request failed\n{Request}", requestMessage);
+            return Error.Failure(description: "Request failed");
+        }
     }
 }

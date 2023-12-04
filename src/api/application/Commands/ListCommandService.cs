@@ -4,27 +4,26 @@ using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
 using infrastructure.Items;
 using infrastructure.Mapper;
-using OneOf.Types;
 using shared.Models;
 using shared.Models.ListResponse;
 using Error = ErrorOr.Error;
-using Success = ErrorOr.Success;
 
 namespace application.Commands;
 
 public class ListCommandService
 {
+    private const int BuySellLimit = 10000;
     private readonly ItemListRepo _itemListRepo;
-    private readonly ItemListValueRepo _itemListValueRepo;
+    private readonly ItemListSnapshotRepo _itemListSnapshotRepo;
     private readonly ItemsService _itemsService;
 
     public ListCommandService(
         ItemListRepo itemListRepo,
-        ItemListValueRepo itemListValueRepo,
+        ItemListSnapshotRepo itemListSnapshotRepo,
         ItemsService itemsService)
     {
         _itemListRepo = itemListRepo;
-        _itemListValueRepo = itemListValueRepo;
+        _itemListSnapshotRepo = itemListSnapshotRepo;
         _itemsService = itemsService;
     }
 
@@ -32,7 +31,7 @@ public class ListCommandService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var lists = await _itemListRepo.GetListInfosForUserId(userId);
@@ -56,13 +55,13 @@ public class ListCommandService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var isCurrencyValid = CurrenciesHelper.IsCurrencyValid(newListModel.Currency);
         if (isCurrencyValid == false)
         {
-            return Error.Conflict(description: $"Currency \"{newListModel.Currency}\" is not a valid currency");
+            return Error.Failure(description: $"Currency \"{newListModel.Currency}\" is not a valid currency");
         }
 
         var existingListWithName = await _itemListRepo.ExistsWithNameForUser(userId, newListModel.ListName);
@@ -72,7 +71,7 @@ public class ListCommandService
         }
 
         // TODO: itemlistdbmodel as parameter and check if url exists before adding?
-        var list = await _itemListRepo.New(
+        var list = await _itemListRepo.CreateNewList(
             userId,
             newListModel.ListName,
             newListModel.ListDescription,
@@ -80,10 +79,10 @@ public class ListCommandService
             newListModel.Public
         );
 
-        var listValue = await _itemListValueRepo.CalculateLatest(list);
+        var listValue = await _itemListSnapshotRepo.CalculateWithLatestPrices(list);
         var listResponse = ItemListMapper.MapToListResponse(
             list,
-            new List<ItemListValueDbModel> { listValue },
+            new List<ItemListSnapshotDbModel> { listValue },
             new List<ItemListItemActionDbModel>(),
             _itemsService);
 
@@ -116,7 +115,7 @@ public class ListCommandService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var list = await _itemListRepo.GetByUrl(listUrl);
@@ -139,11 +138,11 @@ public class ListCommandService
         string listUrl,
         long itemId,
         decimal price,
-        long amount)
+        int amount)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var list = await _itemListRepo.GetByUrl(listUrl);
@@ -154,11 +153,21 @@ public class ListCommandService
 
         if (list.Value.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+        }
+
+        if (amount <= 0)
+        {
+            return Error.Failure(description: $"Cant buy {amount} items");
+        }
+
+        if (amount >= BuySellLimit)
+        {
+            return Error.Failure(description: "Cant buy more then 5000 items at once");
         }
 
         await _itemListRepo.AddItemAction("B", list.Value, itemId, price, amount);
-        await _itemListValueRepo.CalculateLatest(list.Value);
+        await _itemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
         return Result.Created;
     }
 
@@ -167,45 +176,43 @@ public class ListCommandService
         string listUrl,
         long itemId,
         decimal price,
-        long amount)
+        int amount)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
-        //TODO: can be optimized so you dont have to call the database multiple times
-        var list = await GetList(userId, listUrl);
-        if (list.IsError)
+        var listResult = await _itemListRepo.GetByUrl(listUrl);
+        if (listResult.IsError)
         {
-            return list.FirstError;
+            return listResult.FirstError;
         }
 
-        if (list.Value.UserId.Equals(userId) == false)
+        if (listResult.Value.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
-        var itemsInList = list.Value.Items.FirstOrDefault(item => item.ItemId == itemId);
-        if (itemsInList is null)
+        if (amount <= 0)
         {
-            return Error.Conflict($"The list \"{listUrl}\" dose not contain an item with the id \"{itemId}\"");
+            return Error.Failure(description: $"Cant sell {amount} items");
         }
 
-        if (amount > itemsInList.TotalBuyAmount - itemsInList.TotalSellAmount)
+        if (amount >= BuySellLimit)
         {
-            return Error.Conflict(
-                $"The list \"{listUrl}\" dose not contain enough item with the id \"{itemId}\" to sell {amount} items");
+            return Error.Failure(description: "Cant sell more then 5000 items at once");
         }
 
-        var listDbModel = await _itemListRepo.GetByUrl(listUrl);
-        if (listDbModel.IsError)
+        var currentItemCount = await _itemListRepo.GetCurrentItemCount(listResult.Value, itemId);
+        if (amount > currentItemCount)
         {
-            return listDbModel.FirstError;
+            return Error.Conflict(description:
+                $"Cant sell {amount} items if the list \"{listUrl}\" only contains {currentItemCount} items with the id \"{itemId}\"");
         }
 
-        await _itemListRepo.AddItemAction("S", listDbModel.Value, itemId, price, amount);
-        await _itemListValueRepo.CalculateLatest(listDbModel.Value);
+        await _itemListRepo.AddItemAction("S", listResult.Value, itemId, price, amount);
+        await _itemListSnapshotRepo.CalculateWithLatestPrices(listResult.Value);
         return Result.Created;
     }
 
@@ -213,7 +220,7 @@ public class ListCommandService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var list = await _itemListRepo.GetByUrl(listUrl);
@@ -224,7 +231,7 @@ public class ListCommandService
 
         if (list.Value.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
         await _itemListRepo.UpdateName(list.Value.Id, newName);
@@ -235,7 +242,7 @@ public class ListCommandService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var list = await _itemListRepo.GetByUrl(listUrl);
@@ -246,7 +253,7 @@ public class ListCommandService
 
         if (list.Value.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
         await _itemListRepo.UpdateDescription(list.Value.Id, newDescription);
@@ -257,7 +264,7 @@ public class ListCommandService
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Error.Unauthorized("UserId not found");
+            return Error.Unauthorized(description: "UserId not found");
         }
 
         var list = await _itemListRepo.GetByUrl(listUrl);
@@ -268,7 +275,7 @@ public class ListCommandService
 
         if (list.Value.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized($"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
 
         await _itemListRepo.UpdatePublic(list.Value.Id, newPublic);

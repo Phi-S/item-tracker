@@ -89,7 +89,7 @@ public static class ItemListEndpoint
             string url,
             [FromQuery] long itemId,
             [FromQuery] decimal price,
-            [FromQuery] long amount) =>
+            [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
             var buyItem = await listCommandService.BuyItem(userId, url, itemId, price, amount);
@@ -109,7 +109,7 @@ public static class ItemListEndpoint
             string url,
             [FromQuery] long itemId,
             [FromQuery] decimal price,
-            [FromQuery] long amount) =>
+            [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
             var sellItem = await listCommandService.SellItem(userId, url, itemId, price, amount);

@@ -7,6 +7,16 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=43f28359_002D0607_002D4eb6_002Da1bb_002D605da429217d/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from &amp;lt;tests&amp;gt;" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;Project Location="C:\programming\code\dotnet\repos\item-tracker" Presentation="&amp;lt;tests&amp;gt;" /&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=52e6d2f3_002D40cf_002D4a22_002Db640_002Dc6d7a1c9f190/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Test" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;xUnit::52950902-F1D4-4A36-8CDF-9C8427B82C83::net8.0::infrastructureTests.Database.ItemListValueRepoTest.Test&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=695e7cf9_002Dc289_002D4bc6_002Db470_002Daa4973fd94cc/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Test #2" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;xUnit::52950902-F1D4-4A36-8CDF-9C8427B82C83::net8.0::infrastructureTests.Database.ItemListValueRepoTest.Test&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
 	
 	
 	

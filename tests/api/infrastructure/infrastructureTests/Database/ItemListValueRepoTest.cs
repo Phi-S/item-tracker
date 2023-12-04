@@ -74,10 +74,13 @@ public class ItemListValueRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel
-        {
-            CreatedUtc = default
-        });
+        var itemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(
+            new ItemPriceRefreshDbModel
+            {
+                SteamPricesLastModified = default,
+                Buff163PricesLastModified = default,
+                CreatedUtc = default
+            });
         await dbContext.SaveChangesAsync();
 
         await dbContext.ItemPrices.AddAsync(new ItemPriceDbModel
@@ -85,15 +88,15 @@ public class ItemListValueRepoTest
             ItemId = 1,
             SteamPriceUsd = 1,
             SteamPriceEur = 2,
-            BuffPriceUsd = 3,
-            BuffPriceEur = 4,
+            Buff163PriceUsd = 3,
+            Buff163PriceEur = 4,
             ItemPriceRefresh = itemPriceRefresh.Entity
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListValueRepo = provider.GetRequiredService<ItemListValueRepo>();
+        var itemListValueRepo = provider.GetRequiredService<ItemListSnapshotRepo>();
         var sw = Stopwatch.StartNew();
-        var newItemListValue = await itemListValueRepo.CalculateLatest(list.Entity);
+        var newItemListValue = await itemListValueRepo.CalculateWithLatestPrices(list.Entity);
         _outputHelper.WriteLine($"itemListValueRepo.CalculateLatest duration: {sw.ElapsedMilliseconds} ms");
         Assert.True(newItemListValue.SteamValue.HasValue);
         Assert.True(newItemListValue.SteamValue.Value == 4);

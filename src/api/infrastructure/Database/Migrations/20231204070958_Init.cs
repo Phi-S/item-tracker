@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace infrastructure.Database.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -39,6 +39,8 @@ namespace infrastructure.Database.Migrations
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    SteamPricesLastModified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Buff163PricesLastModified = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -56,7 +58,7 @@ namespace infrastructure.Database.Migrations
                     ItemId = table.Column<long>(type: "bigint", nullable: false),
                     Action = table.Column<string>(type: "character varying(1)", maxLength: 1, nullable: false),
                     PricePerOne = table.Column<decimal>(type: "numeric", nullable: false),
-                    Amount = table.Column<long>(type: "bigint", nullable: false),
+                    Amount = table.Column<int>(type: "integer", nullable: false),
                     CreatedUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -77,10 +79,11 @@ namespace infrastructure.Database.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ListId = table.Column<long>(type: "bigint", nullable: false),
+                    InvestedCapital = table.Column<decimal>(type: "numeric", nullable: false),
+                    ItemCount = table.Column<int>(type: "integer", nullable: false),
                     SteamValue = table.Column<decimal>(type: "numeric", nullable: true),
                     BuffValue = table.Column<decimal>(type: "numeric", nullable: true),
-                    InvestedCapital = table.Column<decimal>(type: "numeric", nullable: false),
-                    ItemPriceRefreshId = table.Column<long>(type: "bigint", nullable: true),
+                    ItemPriceRefreshId = table.Column<long>(type: "bigint", nullable: false),
                     CreatedUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -96,7 +99,8 @@ namespace infrastructure.Database.Migrations
                         name: "FK_ItemListValues_ItemPriceRefresh_ItemPriceRefreshId",
                         column: x => x.ItemPriceRefreshId,
                         principalTable: "ItemPriceRefresh",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -108,8 +112,8 @@ namespace infrastructure.Database.Migrations
                     ItemId = table.Column<long>(type: "bigint", nullable: false),
                     SteamPriceUsd = table.Column<decimal>(type: "numeric", nullable: true),
                     SteamPriceEur = table.Column<decimal>(type: "numeric", nullable: true),
-                    BuffPriceUsd = table.Column<decimal>(type: "numeric", nullable: true),
-                    BuffPriceEur = table.Column<decimal>(type: "numeric", nullable: true),
+                    Buff163PriceUsd = table.Column<decimal>(type: "numeric", nullable: true),
+                    Buff163PriceEur = table.Column<decimal>(type: "numeric", nullable: true),
                     ItemPriceRefreshId = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>

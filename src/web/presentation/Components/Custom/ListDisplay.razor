@@ -5,16 +5,19 @@
 
 <div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
     <button class="col-3 h-100 container btn border-end rounded-0" @onclick="NavigateToList">
-        <div class="row row-cols-1 justify-content-center text-decoration-underline font-monospace p-1" style="height: 15%">
+        <div class="row row-cols-2 justify-content-center text-decoration-underline p-1" style="height: 15%">
             @List.Name
         </div>
-        <div class="row row-cols-10 justify-content-center font-monospace p-1" style="font-size: small; height: 70%">
+        <div class="row row-cols-8 justify-content-center p-1" style="font-size: small; height: 55%">
             <div class="h-100">
                 @List.Description
             </div>
         </div>
-        <div class="row row-cols-1 justify-content-center font-monospace p-1 align-content-end" style="height: 15%">
-            @List.Items.Sum(item => item.TotalBuyAmount - item.TotalSellAmount) Items
+        <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
+            @List.Items.Sum(item => item.CurrentAmountInvested) Items
+        </div>
+        <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
+            @CurrencyHelper.FormatCurrency(List.Currency, List.Items.Sum(item => item.CurrentCapitalInvested))
         </div>
     </button>
 

@@ -31,10 +31,10 @@
                 @Lists?.Count Lists
             </div>
             <div class="col-3 border-end">
-                @Lists?.Sum(list => list.Items.Sum(item => item.TotalBuyAmount - item.TotalSellAmount)) Items
+                @Lists?.Sum(list => list.Items.Sum(item => item.CurrentAmountInvested)) Items
             </div>
             <div class="col-6 border-end">
-                <button class="btn w-100" @onclick="OpenNewListModal">Create new list</button>
+                <button class="btn w-100 text-decoration-underline" @onclick="OpenNewListModal">Create new list</button>
             </div>
         </div>
 

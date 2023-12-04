@@ -182,7 +182,7 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         return Result.Success;
     }
 
-    public async Task<ErrorOr<TokenResponseModel>> Refresh(string refreshToken)
+    private async Task<ErrorOr<TokenResponseModel>> Refresh(string refreshToken)
     {
         var request = new HttpRequestMessage();
         request.Method = HttpMethod.Post;
@@ -216,10 +216,8 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
 
     public async Task<ErrorOr<Success>> Revoke()
     {
-        var token = await _localStorageService.GetItemAsync<TokenResponseModel>(TokenKey);
-        _logger.LogInformation("Token: {Token}", token);
-
-        if (token is null)
+        var token = await _localStorageService.GetItemAsStringAsync(RefreshTokenKey);
+        if (string.IsNullOrWhiteSpace(token))
         {
             _logger.LogInformation("No token found in local storage");
             return Error.Failure();
@@ -231,7 +229,7 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         request.Content = new FormUrlEncodedContent(new[]
         {
             new KeyValuePair<string, string>("client_id", _clientId),
-            new KeyValuePair<string, string>("token", token.RefreshToken)
+            new KeyValuePair<string, string>("token", token)
         });
 
         var response = await _httpClient.SendAsync(request);
