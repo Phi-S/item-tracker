@@ -1,7 +1,7 @@
-﻿using infrastructure.ItemTrackerApi;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using presentation.Authentication;
 using presentation.Components.Custom;
+using presentation.ItemTrackerApi;
 using shared.Models;
 using shared.Models.ListResponse;
 using Throw;

@@ -1,22 +1,7 @@
-﻿namespace application.Helper;
+﻿namespace presentation.Helper;
 
 public static class CurrencyHelper
 {
-    public static string Get(string currencyString)
-    {
-        if (currencyString.Equals("EUR"))
-        {
-            return "€";
-        }
-
-        if (currencyString.Equals("USD"))
-        {
-            return "$";
-        }
-
-        throw new Exception($"\"{currencyString}\" is not a valid currency");
-    }
-
     public static string FormatCurrency(string currencyString, decimal value)
     {
         value = Math.Round(value, 2);

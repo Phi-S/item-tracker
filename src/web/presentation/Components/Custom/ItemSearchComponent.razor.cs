@@ -1,7 +1,7 @@
-﻿using infrastructure.ItemTrackerApi;
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using presentation.Authentication;
+using presentation.ItemTrackerApi;
 using shared.Models;
 
 namespace presentation.Components.Custom;

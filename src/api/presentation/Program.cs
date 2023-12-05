@@ -60,7 +60,6 @@ try
         });
     });
 
-    builder.Services.AddInfrastructure();
     builder.Services.AddApplication();
 
     builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();

@@ -2,12 +2,12 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using application;
 using ErrorOr;
+using presentation.Helper;
 using shared.Models;
 using shared.Models.ListResponse;
 
-namespace infrastructure.ItemTrackerApi;
+namespace presentation.ItemTrackerApi;
 
 [SuppressMessage("Maintainability", "CA1507:Use nameof to express symbol names")]
 public partial class ItemTrackerApiService

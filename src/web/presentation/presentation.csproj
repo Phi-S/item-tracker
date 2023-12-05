@@ -16,6 +16,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" PrivateAssets="all" />
         <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.0" />
         <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
         <PackageReference Include="Throw" Version="1.4.0" />
     </ItemGroup>
 
@@ -26,8 +27,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\application\application.csproj" />
-      <ProjectReference Include="..\infrastructure\infrastructure.csproj" />
+      <ProjectReference Include="..\..\shared\shared.csproj" />
     </ItemGroup>
 
 </Project>

@@ -25,9 +25,8 @@ public class ListDisplayRazor : ComponentBase
         }
     }
 
-    public async
-        Task<(ChartData chartData, LineChartOptionsExtension lineChartOptionsExtension)> GetDiagramData(
-            ListResponse listResponse)
+    private async Task<(ChartData chartData, LineChartOptionsExtension lineChartOptionsExtension)> GetDiagramData(
+        ListResponse listResponse)
     {
         var timezoneOffsetH = await JsRuntime.GetBrowserTimezoneOffsetInH();
 
@@ -41,8 +40,8 @@ public class ListDisplayRazor : ComponentBase
             foreach (var listValue in listResponse.ListValues)
             {
                 dataLabels.Add(listValue.CreatedAt.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
-                steamPriceValues.Add((double)(listValue.SteamValue ?? 0));
-                buffPriceValues.Add((double)(listValue.Buff163Value ?? 0));
+                steamPriceValues.Add(listValue.SteamValue is null ? 0 : Math.Round((double)listValue.SteamValue, 2));
+                buffPriceValues.Add(listValue.Buff163Value is null ? 0 : Math.Round((double)listValue.Buff163Value, 2));
                 investedCapitalValues.Add((double)listValue.InvestedCapital);
             }
         }
@@ -152,7 +151,7 @@ public class ListDisplayRazor : ComponentBase
         diagramData.chartData.Datasets.ThrowIfNull();
         var data = new
         {
-            Labels = diagramData.chartData.Labels,
+            diagramData.chartData.Labels,
             Datasets = diagramData.chartData.Datasets.OfType<LineChartDataset>()
         };
         await JsRuntime.InvokeVoidAsync(

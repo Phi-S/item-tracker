@@ -1,6 +1,6 @@
 ﻿using System.Web;
 
-namespace application;
+namespace presentation.Helper;
 
 public static class UriExtensionsMethods
 {

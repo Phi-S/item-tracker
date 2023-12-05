@@ -2,12 +2,10 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using ErrorOr;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using shared.Models;
+using shared;
 using Throw;
 
-namespace infrastructure.ItemTrackerApi;
+namespace presentation.ItemTrackerApi;
 
 public partial class ItemTrackerApiService
 {
@@ -87,7 +85,7 @@ public partial class ItemTrackerApiService
             {
                 var message = $"Request failed with status code {response.StatusCode}";
                 var responseContentAsString = await response.Content.ReadAsStringAsync();
-                var errorResponseModel = JsonSerializer.Deserialize<ApiErrorResponseModel>(responseContentAsString);
+                var errorResponseModel = JsonSerializer.Deserialize<ErrorResult>(responseContentAsString);
                 if (errorResponseModel is null)
                 {
                     return Error.Failure(description: message);

@@ -1,11 +1,10 @@
-using application;
 using Blazored.LocalStorage;
-using infrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using presentation.Authentication;
 using presentation.Components;
+using presentation.ItemTrackerApi;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -18,8 +17,6 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<CognitoAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(s =>
     s.GetRequiredService<CognitoAuthenticationStateProvider>());
-
-builder.Services.AddInfrastructure();
-builder.Services.AddApplication();
+builder.Services.AddSingleton<ItemTrackerApiService>();
 
 await builder.Build().RunAsync();
