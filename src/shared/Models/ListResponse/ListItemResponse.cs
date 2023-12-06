@@ -10,7 +10,7 @@ public record ListItemActionResponse(
     [property: JsonRequired, JsonPropertyName("amount")]
     int Amount,
     [property: JsonRequired, JsonPropertyName("price")]
-    decimal Price,
+    long Price,
     [property: JsonRequired, JsonPropertyName("created_utc")]
     DateTime CreatedAt);
 
@@ -21,14 +21,18 @@ public record ListItemResponse(
     string ItemName,
     [property: JsonRequired, JsonPropertyName("item_image")]
     string ItemImage,
-    [property: JsonRequired, JsonPropertyName("current_capital_invested")]
-    decimal CurrentCapitalInvested,
+    [property: JsonRequired, JsonPropertyName("capital_invested")]
+    long CapitalInvested,
     // CurrentAmountInvested == buyAmount - sellAmount
-    [property: JsonRequired, JsonPropertyName("current_amount_invested")]
-    int CurrentAmountInvested,
+    [property: JsonRequired, JsonPropertyName("amount_invested")]
+    int AmountInvested,
     // CurrentAverageBuyPrice == The average buy price since the last time the item amount was 0
-    [property: JsonRequired, JsonPropertyName("current_average_buy_price")]
-    decimal CurrentAverageBuyPrice,
+    [property: JsonRequired, JsonPropertyName("average_buy_price")]
+    long AverageBuyPrice,
+    [property: JsonRequired, JsonPropertyName("sales_value")]
+    long SalesValue,
+    [property: JsonRequired, JsonPropertyName("profit")]
+    long Profit,
     [property: JsonRequired, JsonPropertyName("actions")]
     List<ListItemActionResponse> Actions
 );

@@ -2,8 +2,10 @@
 using presentation.Authentication;
 using presentation.Components.Custom;
 using presentation.ItemTrackerApi;
+using shared.Currencies;
 using shared.Models;
 using shared.Models.ListResponse;
+using Throw;
 
 namespace presentation.Components.Pages;
 
@@ -72,6 +74,7 @@ public class ListRazor : ComponentBase
         AddEntryModalRef.OkButtonString = AddEntryModalRef.Title;
         AddEntryModalRef.OkButtonAction = async () =>
         {
+            List.ThrowIfNull();
             var accessToken = AuthenticationStateProvider.Token?.AccessToken;
             if (string.IsNullOrWhiteSpace(accessToken))
             {
@@ -100,6 +103,7 @@ public class ListRazor : ComponentBase
                 return;
             }
 
+            var unitPrice = CurrencyHelper.CurrencyToSmallestUnit(List.Currency, price.Value);
             if (buySell)
             {
                 var buyItem = await ItemTrackerApiService.BuyItem(
@@ -107,7 +111,7 @@ public class ListRazor : ComponentBase
                     ListUrl,
                     selectedItem.Id,
                     amount.Value,
-                    price.Value
+                    unitPrice
                 );
                 if (buyItem.IsError)
                 {
@@ -124,7 +128,7 @@ public class ListRazor : ComponentBase
                     return;
                 }
 
-                if (amount > itemInList.CurrentAmountInvested)
+                if (amount > itemInList.AmountInvested)
                 {
                     ErrorMessage = "You can't sell more items than the list contains";
                     return;
@@ -135,7 +139,7 @@ public class ListRazor : ComponentBase
                     ListUrl,
                     selectedItem.Id,
                     amount.Value,
-                    price.Value
+                    unitPrice
                 );
                 if (sellItem.IsError)
                 {

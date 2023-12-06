@@ -1,6 +1,7 @@
 ﻿@using shared.Models.ListResponse
 @using BlazorBootstrap
 @using presentation.Helper
+@using shared.Currencies
 @inherits ListDisplayRazor
 
 <div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
@@ -14,10 +15,10 @@
             </div>
         </div>
         <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
-            @List.Items.Sum(item => item.CurrentAmountInvested) Items
+            @List.Items.Sum(item => item.AmountInvested) Items
         </div>
         <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
-            @CurrencyHelper.FormatCurrency(List.Currency, List.Items.Sum(item => item.CurrentCapitalInvested))
+            @CurrencyHelper.FormatCurrency(List.Currency, List.Items.Sum(item => item.CapitalInvested))
         </div>
     </button>
 

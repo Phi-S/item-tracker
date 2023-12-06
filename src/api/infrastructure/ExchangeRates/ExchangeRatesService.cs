@@ -2,8 +2,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ErrorOr;
-using infrastructure.Currencies;
 using Microsoft.Extensions.Configuration;
+using shared.Currencies;
 using Throw;
 
 namespace infrastructure.ExchangeRates;
@@ -66,8 +66,6 @@ public class ExchangeRatesService
                 $"Failed to parse usd rate string \"{usdRateString}\"");
         }
 
-        usdRate = 1 / Math.Round(usdRate, 2, MidpointRounding.ToZero);
-        usdRate = Math.Round(usdRate, 2, MidpointRounding.ToZero);
-        return usdRate;
+        return 1 / usdRate;
     }
 }

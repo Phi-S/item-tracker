@@ -23,7 +23,7 @@ public class ItemListValueRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             UserId = "test_user",
             Name = "test_list",
@@ -36,45 +36,45 @@ public class ItemListValueRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 1,
             CreatedUtc = default
         });
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 2,
             CreatedUtc = default
         });
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "S",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 2,
             CreatedUtc = default
         });
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 1,
             CreatedUtc = default
         });
         await dbContext.SaveChangesAsync();
 
-        var itemPriceRefresh = await dbContext.ItemPriceRefresh.AddAsync(
+        var itemPriceRefresh = await dbContext.PricesRefresh.AddAsync(
             new ItemPriceRefreshDbModel
             {
                 SteamPricesLastModified = default,
@@ -83,7 +83,7 @@ public class ItemListValueRepoTest
             });
         await dbContext.SaveChangesAsync();
 
-        await dbContext.ItemPrices.AddAsync(new ItemPriceDbModel
+        await dbContext.Prices.AddAsync(new ItemPriceDbModel
         {
             ItemId = 1,
             SteamPriceUsd = 1,

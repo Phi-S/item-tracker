@@ -82,11 +82,11 @@ public partial class ItemTrackerApiService
         string listUrl,
         long itemId,
         long amount,
-        decimal price)
+        long price)
     {
         var uri = new Uri($"{_apiEndpointUrl}/list/{listUrl}/buy-item");
         uri = uri.AddParameter("itemId", itemId.ToString());
-        uri = uri.AddParameter("price", price.ToString(CultureInfo.InvariantCulture));
+        uri = uri.AddParameter("unitPrice", price.ToString(CultureInfo.InvariantCulture));
         uri = uri.AddParameter("amount", amount.ToString());
 
         var response = await PostWithAuthAsync(uri.AbsoluteUri, accessToken);
@@ -103,11 +103,11 @@ public partial class ItemTrackerApiService
         string listUrl,
         long itemId,
         long amount,
-        decimal price)
+        long price)
     {
         var uri = new Uri($"{_apiEndpointUrl}/list/{listUrl}/sell-item");
         uri = uri.AddParameter("itemId", itemId.ToString());
-        uri = uri.AddParameter("price", price.ToString(CultureInfo.InvariantCulture));
+        uri = uri.AddParameter("unitPrice", price.ToString(CultureInfo.InvariantCulture));
         uri = uri.AddParameter("amount", amount.ToString());
 
         var response = await PostWithAuthAsync(uri.AbsoluteUri, accessToken);

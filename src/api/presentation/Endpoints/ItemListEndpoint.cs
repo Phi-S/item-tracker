@@ -89,11 +89,11 @@ public static class ItemListEndpoint
             ListCommandService listCommandService,
             string url,
             [FromQuery] long itemId,
-            [FromQuery] decimal price,
+            [FromQuery] long unitPrice,
             [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
-            var buyItem = await listCommandService.BuyItem(userId, url, itemId, price, amount);
+            var buyItem = await listCommandService.BuyItem(userId, url, itemId, unitPrice, amount);
             if (buyItem.IsError)
             {
                 return buyItem.FirstError.Type == ErrorType.Unauthorized
@@ -109,11 +109,11 @@ public static class ItemListEndpoint
             ListCommandService listCommandService,
             string url,
             [FromQuery] long itemId,
-            [FromQuery] decimal price,
+            [FromQuery] long unitPrice,
             [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
-            var sellItem = await listCommandService.SellItem(userId, url, itemId, price, amount);
+            var sellItem = await listCommandService.SellItem(userId, url, itemId, unitPrice, amount);
             if (sellItem.IsError)
             {
                 return sellItem.FirstError.Type == ErrorType.Unauthorized

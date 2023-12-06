@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using presentation.BlazorExtensions;
+using shared.Currencies;
 using shared.Models.ListResponse;
 using Throw;
 
@@ -35,14 +36,18 @@ public class ListDisplayRazor : ComponentBase
         var buffPriceValues = new List<double>();
         var investedCapitalValues = new List<double>();
 
-        if (List.ListValues.Any())
+        if (List.ListSnapshots.Any())
         {
-            foreach (var listValue in listResponse.ListValues)
+            foreach (var listValue in listResponse.ListSnapshots)
             {
                 dataLabels.Add(listValue.CreatedAt.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
-                steamPriceValues.Add(listValue.SteamValue is null ? 0 : Math.Round((double)listValue.SteamValue, 2));
-                buffPriceValues.Add(listValue.Buff163Value is null ? 0 : Math.Round((double)listValue.Buff163Value, 2));
-                investedCapitalValues.Add((double)listValue.InvestedCapital);
+                steamPriceValues.Add(listValue.SteamValue is null
+                    ? 0
+                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.SteamValue.Value));
+                buffPriceValues.Add(listValue.Buff163Value is null
+                    ? 0
+                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.Buff163Value.Value));
+                investedCapitalValues.Add(CurrencyHelper.ToDouble(listResponse.Currency, listValue.InvestedCapital));
             }
         }
         else

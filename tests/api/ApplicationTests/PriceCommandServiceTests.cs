@@ -27,7 +27,7 @@ public class PriceCommandServiceTests
         await using var provider = serviceCollection.BuildServiceProvider();
 
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             UserId = "test_user",
             Name = "test_list",
@@ -40,39 +40,39 @@ public class PriceCommandServiceTests
         });
         await dbContext.SaveChangesAsync();
 
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 1,
             CreatedUtc = default
         });
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 2,
             CreatedUtc = default
         });
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "S",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 2,
             CreatedUtc = default
         });
-        await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 1,
             CreatedUtc = default
         });
@@ -89,7 +89,7 @@ public class PriceCommandServiceTests
 
         sw.Stop();
 
-        var itemPricesCount = dbContext.ItemPrices.Count();
+        var itemPricesCount = dbContext.Prices.Count();
         Assert.True(itemPricesCount > 0, $"{itemPricesCount} item prices added to database");
         _outputHelper.WriteLine($"{itemPricesCount} item prices added to database");
 
@@ -101,7 +101,7 @@ public class PriceCommandServiceTests
 
         Assert.True(allItems.Value.Count == itemPricesCount, "Not all items got prices");
 
-        var listValue = dbContext.ItemListValues.Where(listValue => listValue.List.Id == list.Entity.Id).ToList();
+        var listValue = dbContext.ListSnapshots.Where(listValue => listValue.List.Id == list.Entity.Id).ToList();
         if (listValue.Count == 0)
         {
             Assert.Fail("No itemListValues found");

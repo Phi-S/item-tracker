@@ -23,7 +23,7 @@ public class ItemListRepoTest
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
         var userId = "test_user";
-        var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -36,7 +36,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
 
-        var priceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel
+        var priceRefresh = await dbContext.PricesRefresh.AddAsync(new ItemPriceRefreshDbModel
         {
             Id = 1,
             SteamPricesLastModified = default,
@@ -44,7 +44,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
 
-        var listValue = await dbContext.ItemListValues.AddAsync(new ItemListSnapshotDbModel
+        var listValue = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
         {
             Id = 1,
             List = list.Entity,
@@ -56,13 +56,13 @@ public class ItemListRepoTest
             ItemCount = 0
         });
 
-        var itemAction = await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        var itemAction = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             Id = 1,
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 1,
             CreatedUtc = default
         });
@@ -89,7 +89,7 @@ public class ItemListRepoTest
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
         long listId = 5;
-        var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = listId,
             UserId = "test_user",
@@ -102,7 +102,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
 
-        var priceRefresh = await dbContext.ItemPriceRefresh.AddAsync(new ItemPriceRefreshDbModel
+        var priceRefresh = await dbContext.PricesRefresh.AddAsync(new ItemPriceRefreshDbModel
         {
             Id = 1,
             SteamPricesLastModified = default,
@@ -110,7 +110,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
 
-        var listValue = await dbContext.ItemListValues.AddAsync(new ItemListSnapshotDbModel
+        var listValue = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
         {
             Id = 1,
             List = list.Entity,
@@ -122,13 +122,13 @@ public class ItemListRepoTest
             ItemCount = 0
         });
 
-        var itemAction = await dbContext.ItemListItemAction.AddAsync(new ItemListItemActionDbModel
+        var itemAction = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             Id = 1,
             List = list.Entity,
             ItemId = 1,
             Action = "B",
-            PricePerOne = 1,
+            UnitPrice = 1,
             Amount = 1,
             CreatedUtc = default
         });
@@ -154,7 +154,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string userId = "test_user_id";
         const string listName = "test_list_name";
-        await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -181,7 +181,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string userId = "test_user_id";
         const string listName = "test_list_name";
-        await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -208,7 +208,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string userId = "test_user_id";
         const string listName = "test_list_name";
-        await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -235,7 +235,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string listUrl = "test_list_url";
         const bool deleted = false;
-        var list = await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = "test_user_id",
@@ -264,7 +264,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string listUrl = "test_list_url";
         const bool deleted = true;
-        await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = "test_user_id",
@@ -291,7 +291,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string listUrl = "test_list_url";
         const bool deleted = false;
-        await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = 1,
             UserId = "test_user_id",
@@ -325,7 +325,7 @@ public class ItemListRepoTest
         var list = await itemListRepo.CreateNewList(userId, listName, listDescription, currency, makeListPublic);
 
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var allLists = dbContext.ItemLists.ToList();
+        var allLists = dbContext.Lists.ToList();
         Assert.True(allLists.Count == 1);
         Assert.Equal(userId, list.UserId);
         Assert.Equal(listName, list.Name);
@@ -348,7 +348,7 @@ public class ItemListRepoTest
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
         const long listId = 111;
-        await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = listId,
             UserId = "test_user_id",
@@ -362,9 +362,9 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        Assert.True(dbContext.ItemLists.Count() == 1);
+        Assert.True(dbContext.Lists.Count() == 1);
         var itemListRepo = provider.GetRequiredService<ItemListRepo>();
         await itemListRepo.DeleteList(listId);
-        Assert.True(dbContext.ItemLists.Any(list => list.Deleted == false) == false);
+        Assert.True(dbContext.Lists.Any(list => list.Deleted == false) == false);
     }
 }

@@ -25,9 +25,7 @@ public static class InfrastructureExtensionMethods
             }
         }
 
-        serviceCollection.AddScoped<ItemListRepo>();
-        serviceCollection.AddScoped<ItemListSnapshotRepo>();
-        serviceCollection.AddScoped<ItemPriceRepo>();
+        serviceCollection.AddScoped<UnitOfWork>();
 
         #endregion
 

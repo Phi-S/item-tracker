@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using ErrorOr;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
@@ -16,23 +15,20 @@ public class PriceCommandService
     private readonly ItemsService _itemsService;
     private readonly ItemPriceService _itemPriceService;
     private readonly ExchangeRatesService _exchangeRatesService;
-    private readonly ItemPriceRepo _itemPriceRepo;
-    private readonly ItemListSnapshotRepo _itemListSnapshotRepo;
+    private readonly UnitOfWork _unitOfWork;
 
     public PriceCommandService(
         ILogger<PriceCommandService> logger,
         ItemsService itemsService,
         ItemPriceService itemPriceService,
         ExchangeRatesService exchangeRatesService,
-        ItemPriceRepo itemPriceRepo,
-        ItemListSnapshotRepo itemListSnapshotRepo)
+        UnitOfWork unitOfWork)
     {
         _logger = logger;
         _itemsService = itemsService;
         _itemPriceService = itemPriceService;
         _exchangeRatesService = exchangeRatesService;
-        _itemPriceRepo = itemPriceRepo;
-        _itemListSnapshotRepo = itemListSnapshotRepo;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ErrorOr<Success>> RefreshItemPrices()
@@ -52,17 +48,17 @@ public class PriceCommandService
 
         var (steamPrices, buff163Prices) = prices.Value;
 
-        var exchangeRate = await _exchangeRatesService.GetUsdEurExchangeRate();
-        if (exchangeRate.IsError)
+        var usdEurExchangeRate = await _exchangeRatesService.GetUsdEurExchangeRate();
+        if (usdEurExchangeRate.IsError)
         {
-            return exchangeRate.FirstError;
+            return usdEurExchangeRate.FirstError;
         }
 
-        var priceRefresh = await _itemPriceRepo.CreateNew(
+        var priceRefresh = await _unitOfWork.ItemPriceRepo.CreateNew(
+            Math.Round(usdEurExchangeRate.Value, 2, MidpointRounding.ToZero),
             steamPrices.LastModified,
             buff163Prices.LastModified
         );
-
 
         var dbPrices = new ConcurrentBag<ItemPriceDbModel>();
         var formatPriceTasks = new List<Task>();
@@ -72,28 +68,14 @@ public class PriceCommandService
             {
                 var steamPrice = steamPrices.Prices.Where(price => price.itemName.Equals(item.Name))
                     .Select(price => price.price).FirstOrDefault();
-                var buffPrice = buff163Prices.Prices.Where(price => price.itemName.Equals(item.Name))
+                var buff163Price = buff163Prices.Prices.Where(price => price.itemName.Equals(item.Name))
                     .Select(price => price.price).FirstOrDefault();
-
-                decimal? eurSteamPrice = null;
-                if (steamPrice is not null)
-                {
-                    eurSteamPrice = steamPrice.Value * (decimal)exchangeRate.Value;
-                }
-
-                decimal? eurBuffPrice = null;
-                if (buffPrice is not null)
-                {
-                    eurBuffPrice = buffPrice.Value * (decimal)exchangeRate.Value;
-                }
 
                 var dbPrice = new ItemPriceDbModel
                 {
                     ItemId = item.Id,
-                    SteamPriceUsd = steamPrice,
-                    SteamPriceEur = eurSteamPrice,
-                    Buff163PriceUsd = buffPrice,
-                    Buff163PriceEur = eurBuffPrice,
+                    SteamPriceCentsUsd = steamPrice is null ? null : (int)(steamPrice.Value * 100),
+                    Buff163PriceCentsUsd = buff163Price is null ? null : (int)(buff163Price.Value * 100),
                     ItemPriceRefresh = priceRefresh
                 };
                 dbPrices.Add(dbPrice);
@@ -101,8 +83,10 @@ public class PriceCommandService
         }
 
         await Task.WhenAll(formatPriceTasks);
-        await _itemPriceRepo.Add(dbPrices);
-        await _itemListSnapshotRepo.CalculateLatestForAll(priceRefresh);
+        await _unitOfWork.ItemPriceRepo.Add(dbPrices);
+        await _unitOfWork.Save();
+        await _unitOfWork.ItemListSnapshotRepo.CalculateLatestForAll(priceRefresh);
+        await _unitOfWork.Save();
         _logger.LogInformation("Item prices refreshed");
         return Result.Success;
     }

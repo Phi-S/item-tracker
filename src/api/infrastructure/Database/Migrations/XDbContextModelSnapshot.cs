@@ -70,7 +70,7 @@ namespace infrastructure.Database.Migrations
                     b.HasIndex("Url")
                         .IsUnique();
 
-                    b.ToTable("ItemLists");
+                    b.ToTable("Lists");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemListItemActionDbModel", b =>
@@ -98,14 +98,14 @@ namespace infrastructure.Database.Migrations
                     b.Property<long>("ListId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal>("PricePerOne")
-                        .HasColumnType("numeric");
+                    b.Property<long>("UnitPrice")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ListId");
 
-                    b.ToTable("ItemListItemAction");
+                    b.ToTable("ItemActions");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemListSnapshotDbModel", b =>
@@ -116,17 +116,11 @@ namespace infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<decimal?>("BuffValue")
-                        .HasColumnType("numeric");
+                    b.Property<long?>("BuffValue")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("InvestedCapital")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("ItemCount")
-                        .HasColumnType("integer");
 
                     b.Property<long>("ItemPriceRefreshId")
                         .HasColumnType("bigint");
@@ -134,8 +128,8 @@ namespace infrastructure.Database.Migrations
                     b.Property<long>("ListId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal?>("SteamValue")
-                        .HasColumnType("numeric");
+                    b.Property<long?>("SteamValue")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -143,7 +137,7 @@ namespace infrastructure.Database.Migrations
 
                     b.HasIndex("ListId");
 
-                    b.ToTable("ItemListValues");
+                    b.ToTable("ListSnapshots");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemPriceDbModel", b =>
@@ -154,11 +148,8 @@ namespace infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<decimal?>("Buff163PriceEur")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("Buff163PriceUsd")
-                        .HasColumnType("numeric");
+                    b.Property<long?>("Buff163PriceCentsUsd")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("ItemId")
                         .HasColumnType("bigint");
@@ -166,17 +157,14 @@ namespace infrastructure.Database.Migrations
                     b.Property<long>("ItemPriceRefreshId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal?>("SteamPriceEur")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("SteamPriceUsd")
-                        .HasColumnType("numeric");
+                    b.Property<long?>("SteamPriceCentsUsd")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ItemPriceRefreshId");
 
-                    b.ToTable("ItemPrices");
+                    b.ToTable("Prices");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemPriceRefreshDbModel", b =>
@@ -193,12 +181,15 @@ namespace infrastructure.Database.Migrations
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<double>("EurToUsdExchangeRate")
+                        .HasColumnType("double precision");
+
                     b.Property<DateTime>("SteamPricesLastModified")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.ToTable("ItemPriceRefresh");
+                    b.ToTable("PricesRefresh");
                 });
 
             modelBuilder.Entity("infrastructure.Database.Models.ItemListItemActionDbModel", b =>

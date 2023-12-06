@@ -10,11 +10,11 @@ public class ItemListRepo(XDbContext dbContext)
         GetListInfosForUserId(string userId)
     {
         var result =
-            dbContext.ItemLists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
+            dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
                 .Select(list => Tuple.Create(
                     list,
-                    dbContext.ItemListValues.Where(value => value.List.Id == list.Id).ToList(),
-                    dbContext.ItemListItemAction.Where(item => item.List.Id == list.Id).ToList()
+                    dbContext.ListSnapshots.Where(value => value.List.Id == list.Id).ToList(),
+                    dbContext.ItemActions.Where(item => item.List.Id == list.Id).ToList()
                 )).ToList();
         return await Task.FromResult(result);
     }
@@ -23,24 +23,24 @@ public class ItemListRepo(XDbContext dbContext)
         GetListInfos(long listId)
     {
         var result =
-            dbContext.ItemLists.Where(list => list.Deleted == false && list.Id == listId)
+            dbContext.Lists.Where(list => list.Deleted == false && list.Id == listId)
                 .Select(list => Tuple.Create(
                     list,
-                    dbContext.ItemListValues.Where(value => value.List.Id == list.Id).ToList(),
-                    dbContext.ItemListItemAction.Where(item => item.List.Id == list.Id).ToList()
+                    dbContext.ListSnapshots.Where(value => value.List.Id == list.Id).ToList(),
+                    dbContext.ItemActions.Where(item => item.List.Id == list.Id).ToList()
                 )).Take(1).First();
         return (result.Item1, result.Item2, result.Item3);
     }
 
     public async Task<bool> ExistsWithNameForUser(string userId, string listName)
     {
-        return await dbContext.ItemLists.AnyAsync(list =>
+        return await dbContext.Lists.AnyAsync(list =>
             list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
     }
 
     public async Task<ErrorOr<ItemListDbModel>> GetByUrl(string url)
     {
-        var list = await dbContext.ItemLists.FirstOrDefaultAsync(list => list.Deleted == false && list.Url.Equals(url));
+        var list = await dbContext.Lists.FirstOrDefaultAsync(list => list.Deleted == false && list.Url.Equals(url));
         if (list is null)
         {
             return Error.NotFound(description: "No list found for the given url");
@@ -64,7 +64,7 @@ public class ItemListRepo(XDbContext dbContext)
             .Replace("+", "-");
 
         var currentDateTimeUtc = DateTime.UtcNow;
-        var itemList = await dbContext.ItemLists.AddAsync(new ItemListDbModel
+        var itemList = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             UserId = userId,
             Name = listName,
@@ -76,20 +76,18 @@ public class ItemListRepo(XDbContext dbContext)
             UpdatedUtc = currentDateTimeUtc,
             CreatedUtc = currentDateTimeUtc
         });
-        await dbContext.SaveChangesAsync();
         return itemList.Entity;
     }
 
     public async Task DeleteList(long listId)
     {
-        var listToRemove = await dbContext.ItemLists.FirstAsync(list => list.Id == listId);
+        var listToRemove = await dbContext.Lists.FirstAsync(list => list.Id == listId);
         listToRemove.Deleted = true;
-        await dbContext.SaveChangesAsync();
     }
 
     public async Task<int> GetCurrentItemCount(ItemListDbModel list, long itemId)
     {
-        var actionsForItemId = dbContext.ItemListItemAction
+        var actionsForItemId = dbContext.ItemActions
             .Where(action => action.List.Id == list.Id && action.ItemId == itemId).OrderBy(action => action.CreatedUtc);
         var itemCount = 0;
         foreach (var action in actionsForItemId)
@@ -115,7 +113,7 @@ public class ItemListRepo(XDbContext dbContext)
     public async Task AddItemAction(string actionType,
         ItemListDbModel list,
         long itemId,
-        decimal pricePerOne,
+        long unitPrice,
         int amount)
     {
         if (string.IsNullOrWhiteSpace(actionType) ||
@@ -130,17 +128,16 @@ public class ItemListRepo(XDbContext dbContext)
             List = list,
             ItemId = itemId,
             Action = actionType,
-            PricePerOne = pricePerOne,
+            UnitPrice = unitPrice,
             Amount = amount,
             CreatedUtc = currentDate
         };
-        await dbContext.ItemListItemAction.AddAsync(listItem);
-        await dbContext.SaveChangesAsync();
+        await dbContext.ItemActions.AddAsync(listItem);
     }
 
     public async Task UpdateName(long listId, string newListName)
     {
-        await dbContext.ItemLists
+        await dbContext.Lists
             .Where(l => l.Id == listId)
             .ExecuteUpdateAsync(b =>
                 b.SetProperty(l => l.Name, newListName)
@@ -149,7 +146,7 @@ public class ItemListRepo(XDbContext dbContext)
 
     public async Task UpdateDescription(long listId, string newDescription)
     {
-        await dbContext.ItemLists
+        await dbContext.Lists
             .Where(l => l.Id == listId)
             .ExecuteUpdateAsync(b =>
                 b.SetProperty(l => l.Description, newDescription)
@@ -158,7 +155,7 @@ public class ItemListRepo(XDbContext dbContext)
 
     public async Task UpdatePublic(long listId, bool newPublic)
     {
-        await dbContext.ItemLists
+        await dbContext.Lists
             .Where(l => l.Id == listId)
             .ExecuteUpdateAsync(b =>
                 b.SetProperty(l => l.Public, newPublic)

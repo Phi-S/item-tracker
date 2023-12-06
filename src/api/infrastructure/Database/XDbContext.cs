@@ -7,11 +7,11 @@ namespace infrastructure.Database;
 
 public class XDbContext : DbContext
 {
-    public DbSet<ItemListDbModel> ItemLists { get; set; } = null!;
-    public DbSet<ItemListItemActionDbModel> ItemListItemAction { get; set; } = null!;
-    public DbSet<ItemListSnapshotDbModel> ItemListValues { get; set; } = null!;
-    public DbSet<ItemPriceRefreshDbModel> ItemPriceRefresh { get; set; } = null!;
-    public DbSet<ItemPriceDbModel> ItemPrices { get; set; } = null!;
+    public DbSet<ItemListDbModel> Lists { get; set; } = null!;
+    public DbSet<ItemListItemActionDbModel> ItemActions { get; set; } = null!;
+    public DbSet<ItemListSnapshotDbModel> ListSnapshots { get; set; } = null!;
+    public DbSet<ItemPriceRefreshDbModel> PricesRefresh { get; set; } = null!;
+    public DbSet<ItemPriceDbModel> Prices { get; set; } = null!;
 
     private const string DatabaseConnectionStringConfigName = "DatabaseConnectionString";
     private readonly string _databaseConnectionString;

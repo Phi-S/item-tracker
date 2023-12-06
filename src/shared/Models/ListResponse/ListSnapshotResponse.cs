@@ -4,13 +4,17 @@ namespace shared.Models.ListResponse;
 
 public record ListSnapshotResponse(
     [property: JsonRequired, JsonPropertyName("invested_capital")]
-    decimal InvestedCapital,
+    long InvestedCapital,
     [property: JsonRequired, JsonPropertyName("item_count")]
-    int ItemCount,
+    long ItemCount,
+    [property: JsonRequired, JsonPropertyName("sales_value")]
+    long SalesValue,
+    [property: JsonRequired, JsonPropertyName("profit")]
+    long Profit,
     [property: JsonRequired, JsonPropertyName("steam_value")]
-    decimal? SteamValue,
+    long? SteamValue,
     [property: JsonRequired, JsonPropertyName("buff163_value")]
-    decimal? Buff163Value,
+    long? Buff163Value,
     [property: JsonRequired, JsonPropertyName("created_at")]
     DateTime CreatedAt
 );

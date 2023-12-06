@@ -1,6 +1,6 @@
 ﻿@page "/list/{ListUrl}"
 @using presentation.Authentication
-@using presentation.Helper
+@using shared.Currencies
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
@@ -73,7 +73,7 @@
             </tr>
             </thead>
             <tbody>
-            @foreach (var item in List.Items.Where(item => item.CurrentAmountInvested > 0))
+            @foreach (var item in List.Items.Where(item => item.AmountInvested > 0))
             {
                 <tr class="pb-1 text-center align-middle">
                     <td class="col-1">
@@ -83,13 +83,13 @@
                         <span>@item.ItemName</span>
                     </td>
                     <td class="col-1">
-                        <span>@item.CurrentAmountInvested</span>
+                        <span>@item.AmountInvested</span>
                     </td>
                     <td class="col-2">
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.CurrentAverageBuyPrice)</span>
+                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AverageBuyPrice)</span>
                     </td>
                     <td class="col-1">
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.CurrentAmountInvested * item.CurrentAverageBuyPrice)</span>
+                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AmountInvested * item.AverageBuyPrice)</span>
                     </td>
                     <td class="col-3">
                         <button class="btn btn-outline-danger w-100" @onclick="() => OpenModalSellEntry(item)">Sell</button>
