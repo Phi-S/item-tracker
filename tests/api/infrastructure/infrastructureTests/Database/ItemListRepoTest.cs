@@ -41,7 +41,8 @@ public class ItemListRepoTest
             Id = 1,
             SteamPricesLastModified = default,
             Buff163PricesLastModified = default,
-            CreatedUtc = default
+            CreatedUtc = default,
+            EurToUsdExchangeRate = 1
         });
 
         var listValue = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
@@ -51,9 +52,7 @@ public class ItemListRepoTest
             SteamValue = 1,
             BuffValue = 1,
             ItemPriceRefresh = priceRefresh.Entity,
-            CreatedUtc = default,
-            InvestedCapital = 0,
-            ItemCount = 0
+            CreatedUtc = default
         });
 
         var itemAction = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
@@ -68,7 +67,9 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
+
         var listInfos = await itemListRepo.GetListInfosForUserId(userId);
         Assert.True(listInfos.Count == 1);
         var listInfo = listInfos.First();
@@ -107,7 +108,8 @@ public class ItemListRepoTest
             Id = 1,
             SteamPricesLastModified = default,
             Buff163PricesLastModified = default,
-            CreatedUtc = default
+            CreatedUtc = default,
+            EurToUsdExchangeRate = 1
         });
 
         var listValue = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
@@ -117,9 +119,7 @@ public class ItemListRepoTest
             SteamValue = 1,
             BuffValue = 1,
             ItemPriceRefresh = priceRefresh.Entity,
-            CreatedUtc = default,
-            InvestedCapital = 0,
-            ItemCount = 0
+            CreatedUtc = default
         });
 
         var itemAction = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
@@ -134,7 +134,9 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
+
         var listInfo = itemListRepo.GetListInfos(listId);
         Assert.True(listInfo.list.Id == list.Entity.Id);
         Assert.Equal(listId, listInfo.Item1.Id);
@@ -168,7 +170,8 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         var existsWithNameForUser = await itemListRepo.ExistsWithNameForUser(userId, listName);
         Assert.True(existsWithNameForUser);
     }
@@ -195,7 +198,8 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         var existsWithNameForUser = await itemListRepo.ExistsWithNameForUser(userId + "_not_found", listName);
         Assert.True(existsWithNameForUser == false);
     }
@@ -222,7 +226,8 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         var existsWithNameForUser = await itemListRepo.ExistsWithNameForUser(userId, listName + "_not_found");
         Assert.True(existsWithNameForUser == false);
     }
@@ -249,7 +254,8 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         var listResult = await itemListRepo.GetByUrl(listUrl);
         Assert.True(listResult.IsError == false);
         Assert.Equal(listUrl, listResult.Value.Url);
@@ -278,7 +284,8 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         var listResult = await itemListRepo.GetByUrl(listUrl);
         Assert.True(listResult.IsError);
     }
@@ -305,7 +312,8 @@ public class ItemListRepoTest
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         var listResult = await itemListRepo.GetByUrl(listUrl + "_not_found");
         Assert.True(listResult.IsError);
     }
@@ -315,7 +323,8 @@ public class ItemListRepoTest
     {
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
 
         const string userId = "test_list_user_id";
         const string listName = "test_list_name";
@@ -323,6 +332,7 @@ public class ItemListRepoTest
         const string currency = "test_list_currency";
         const bool makeListPublic = false;
         var list = await itemListRepo.CreateNewList(userId, listName, listDescription, currency, makeListPublic);
+        await unitOfWork.Save();
 
         var dbContext = provider.GetRequiredService<XDbContext>();
         var allLists = dbContext.Lists.ToList();
@@ -363,8 +373,10 @@ public class ItemListRepoTest
         await dbContext.SaveChangesAsync();
 
         Assert.True(dbContext.Lists.Count() == 1);
-        var itemListRepo = provider.GetRequiredService<ItemListRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListRepo = unitOfWork.ItemListRepo;
         await itemListRepo.DeleteList(listId);
+        await unitOfWork.Save();
         Assert.True(dbContext.Lists.Any(list => list.Deleted == false) == false);
     }
 }

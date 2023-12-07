@@ -6,7 +6,7 @@ namespace application.Mapper;
 
 public static class ItemListMapper
 {
-    private static List<ListItemResponse> MapListItemResponses(
+    private static Task<List<ListItemResponse>> MapListItemResponses(
         List<ItemListItemActionDbModel> itemListItemActions, ItemsService itemsService)
     {
         var result = new List<ListItemResponse>();
@@ -22,16 +22,17 @@ public static class ItemListMapper
             result.Add(item);
         }
 
-        return result;
+        return Task.FromResult(result);
     }
 
-    private static ListItemResponse MapListItemResponse(ItemModel item, List<ItemListItemActionDbModel> itemActions)
+    public static ListItemResponse MapListItemResponse(ItemModel item, List<ItemListItemActionDbModel> itemActions)
     {
         var itemActionResponses = new List<ListItemActionResponse>();
         var buyPrices = new List<long>();
         long salesValue = 0;
         long profit = 0;
         var amountInvested = 0;
+        var gotSales = false;
         foreach (var itemAction in itemActions.OrderBy(action => action.CreatedUtc))
         {
             var actionResponse = new ListItemActionResponse(
@@ -63,6 +64,7 @@ public static class ItemListMapper
             }
             else if (actionResponse.Action.Equals("S"))
             {
+                gotSales = true;
                 salesValue += actionResponse.Amount * actionResponse.Price;
                 var tempAverageBuyPrice = (long)Math.Round(buyPrices.Average(), 0);
                 profit += (actionResponse.Price - tempAverageBuyPrice) * actionResponse.Amount;
@@ -70,8 +72,8 @@ public static class ItemListMapper
             }
         }
 
-        var averageBuyPrice = (long)Math.Round(buyPrices.Average(), 0);
-        var capitalInvested = averageBuyPrice * amountInvested;
+        var averageBuyPrice = buyPrices.Count == 0 ? 0 : (long)Math.Round(buyPrices.Average(), 0);
+        var capitalInvested = gotSales ? averageBuyPrice * amountInvested : buyPrices.Sum();
 
         var listItemResponse = new ListItemResponse(
             item.Id,
@@ -137,14 +139,14 @@ public static class ItemListMapper
         );
     }
 
-    private static List<ListSnapshotResponse> MapListSnapshotResponses(
+    private static Task<List<ListSnapshotResponse>> MapListSnapshotResponses(
         IReadOnlyCollection<ItemListSnapshotDbModel> listSnapshots,
         List<ItemListItemActionDbModel> listActions)
     {
         var result = new List<ListSnapshotResponse>();
         if (listSnapshots.Count == 0)
         {
-            return result;
+            return Task.FromResult(result);
         }
 
         if (listActions.Count == 0)
@@ -154,7 +156,7 @@ public static class ItemListMapper
                 result.Add(new ListSnapshotResponse(0, 0, 0, 0, 0, 0, snapshot.CreatedUtc));
             }
 
-            return result;
+            return Task.FromResult(result);
         }
 
 
@@ -163,7 +165,7 @@ public static class ItemListMapper
             result.Add(ListSnapshotResponse(snapshot, listActions));
         }
 
-        return result;
+        return Task.FromResult(result);
     }
 
     public static async Task<ListResponse> MapToListResponse(
@@ -172,17 +174,8 @@ public static class ItemListMapper
         List<ItemListItemActionDbModel> itemListItemActions,
         ItemsService itemsService)
     {
-        var mapListItemResponsesTask = Task.Run(() =>
-        {
-            var items = MapListItemResponses(itemListItemActions, itemsService);
-            return items;
-        });
-
-        var mapListSnapshotResponsesTask = Task.Run(() =>
-        {
-            var listSnapshots = MapListSnapshotResponses(itemListSnapshots, itemListItemActions);
-            return listSnapshots;
-        });
+        var mapListItemResponsesTask = MapListItemResponses(itemListItemActions, itemsService);
+        var mapListSnapshotResponsesTask =  MapListSnapshotResponses(itemListSnapshots, itemListItemActions);
 
         await Task.WhenAll(mapListItemResponsesTask, mapListSnapshotResponsesTask);
 

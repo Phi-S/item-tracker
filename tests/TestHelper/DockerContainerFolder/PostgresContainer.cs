@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using Docker.DotNet.Models;
 using Xunit.Abstractions;
 
@@ -59,6 +60,42 @@ public static class PostgresContainer
         await DockerApi.DockerClient.Containers.StartContainerAsync(response.ID, null);
         var inspectResponse = await DockerApi.DockerClient.Containers.InspectContainerAsync(response.ID);
         var port = inspectResponse.NetworkSettings.Ports.First().Value.First().HostPort;
+
+        var postgresStarted = false;
+        var progress = new Progress<string>();
+        progress.ProgressChanged += (_, logLine) =>
+        {
+            outputHelper.WriteLine(logLine);
+            if (logLine.EndsWith("database system is ready to accept connections"))
+            {
+                postgresStarted = true;
+            }
+        };
+        var cancellationTokenSource = new CancellationTokenSource();
+        _ = DockerApi.DockerClient.Containers.GetContainerLogsAsync(response.ID, new ContainerLogsParameters()
+        {
+            Timestamps = true,
+            Follow = true,
+            ShowStdout = true,
+            ShowStderr = true
+        }, cancellationTokenSource.Token, progress);
+        var sw = Stopwatch.StartNew();
+        while (true)
+        {
+            await Task.Delay(10);
+            if (sw.ElapsedMilliseconds >= 3000)
+            {
+                await cancellationTokenSource.CancelAsync();
+                throw new Exception("Postgres container failed to start");
+            }
+
+            if (postgresStarted)
+            {
+                await cancellationTokenSource.CancelAsync();
+                break;
+            }
+        }
+
         await Task.Delay(1000);
         outputHelper.WriteLine($"Postgres container name: {name}");
         outputHelper.WriteLine($"Postgres container port: {port}");

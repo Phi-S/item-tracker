@@ -34,8 +34,7 @@ public class ItemListValueRepoTest
             UpdatedUtc = default,
             CreatedUtc = default
         });
-        await dbContext.SaveChangesAsync();
-
+        
         await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
         {
             List = list.Entity,
@@ -72,31 +71,35 @@ public class ItemListValueRepoTest
             Amount = 1,
             CreatedUtc = default
         });
-        await dbContext.SaveChangesAsync();
 
         var itemPriceRefresh = await dbContext.PricesRefresh.AddAsync(
             new ItemPriceRefreshDbModel
             {
                 SteamPricesLastModified = default,
                 Buff163PricesLastModified = default,
-                CreatedUtc = default
+                CreatedUtc = default,
+                EurToUsdExchangeRate = 1
             });
-        await dbContext.SaveChangesAsync();
+        await dbContext.Prices.AddAsync(new ItemPriceDbModel
+        {
+            ItemId = 1,
+            SteamPriceCentsUsd = 2,
+            Buff163PriceCentsUsd = 4,
+            ItemPriceRefresh = itemPriceRefresh.Entity
+        });
 
         await dbContext.Prices.AddAsync(new ItemPriceDbModel
         {
             ItemId = 1,
-            SteamPriceUsd = 1,
-            SteamPriceEur = 2,
-            Buff163PriceUsd = 3,
-            Buff163PriceEur = 4,
             ItemPriceRefresh = itemPriceRefresh.Entity
         });
         await dbContext.SaveChangesAsync();
 
-        var itemListValueRepo = provider.GetRequiredService<ItemListSnapshotRepo>();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemListValueRepo = unitOfWork.ItemListSnapshotRepo;
         var sw = Stopwatch.StartNew();
         var newItemListValue = await itemListValueRepo.CalculateWithLatestPrices(list.Entity);
+        await unitOfWork.Save();
         _outputHelper.WriteLine($"itemListValueRepo.CalculateLatest duration: {sw.ElapsedMilliseconds} ms");
         Assert.True(newItemListValue.SteamValue.HasValue);
         Assert.True(newItemListValue.SteamValue.Value == 4);
