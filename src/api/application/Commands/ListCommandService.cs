@@ -14,7 +14,7 @@ public class ListCommandService
     private readonly ItemsService _itemsService;
     private readonly UnitOfWork _unitOfWork;
     private const int BuySellLimit = 10000;
-    
+
     public ListCommandService(ItemsService itemsService, UnitOfWork unitOfWork)
     {
         _itemsService = itemsService;
@@ -66,7 +66,7 @@ public class ListCommandService
             newListModel.Currency,
             newListModel.Public
         );
-  
+
         var listValue = await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list);
         var listResponse = await ItemListMapper.MapToListResponse(
             list,
@@ -155,7 +155,7 @@ public class ListCommandService
         {
             return Error.Failure(description: "Cant buy more then 5000 items at once");
         }
-        
+
         await _unitOfWork.ItemListRepo.AddItemAction("B", list.Value, itemId, unitPrice, amount);
         await _unitOfWork.Save();
         await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
@@ -249,7 +249,7 @@ public class ListCommandService
         {
             return Error.Unauthorized(description: $"The list \"{listUrl}\" dose not belong to the user \"{userId}\"");
         }
-        
+
         await _unitOfWork.ItemListRepo.UpdateDescription(list.Value.Id, newDescription);
         return Result.Updated;
     }

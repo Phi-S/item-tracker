@@ -1,9 +1,9 @@
 ﻿using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Http;
+using shared.Models;
 
-namespace shared;
+namespace presentation.Extension;
 
 public class ErrorResult(int statusCode, string message) : IResult
 {
@@ -14,11 +14,7 @@ public class ErrorResult(int statusCode, string message) : IResult
     {
         httpContext.Response.ContentType = MediaTypeNames.Application.Json;
         httpContext.Response.StatusCode = StatusCode;
-        var resultObject = new
-        {
-            TraceId = httpContext.TraceIdentifier,
-            Message
-        };
+        var resultObject = new ErrorResultModel(httpContext.TraceIdentifier, Message);
 
         var responseJson = JsonSerializer.Serialize(resultObject);
         httpContext.Response.ContentLength = Encoding.UTF8.GetByteCount(responseJson);

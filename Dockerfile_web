@@ -1,0 +1,16 @@
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY src/. .
+RUN dotnet workload install wasm-tools
+RUN apt-get update && apt-get install -y python3 && apt-get install libatomic1
+RUN dotnet publish "web/presentation/presentation.csproj" \
+    -c Release \
+    -o /app
+
+FROM nginx:1.25.3-alpine
+WORKDIR /usr/share/nginx/html
+COPY --from=build /app/nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/wwwroot .
+RUN chown -R nginx:nginx *
+RUN chmod 777 *
+RUN ls -lah

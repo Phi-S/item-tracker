@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using ErrorOr;
 using shared;
+using shared.Models;
 using Throw;
 
 namespace presentation.ItemTrackerApi;
@@ -85,7 +86,7 @@ public partial class ItemTrackerApiService
             {
                 var message = $"Request failed with status code {response.StatusCode}";
                 var responseContentAsString = await response.Content.ReadAsStringAsync();
-                var errorResponseModel = JsonSerializer.Deserialize<ErrorResult>(responseContentAsString);
+                var errorResponseModel = JsonSerializer.Deserialize<ErrorResultModel>(responseContentAsString);
                 if (errorResponseModel is null)
                 {
                     return Error.Failure(description: message);

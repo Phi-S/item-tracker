@@ -1,0 +1,17 @@
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY src/. .
+RUN dotnet publish "api/presentation/presentation.csproj" \
+    -c Release \
+    -o /app \
+    -r linux-x64 \
+    --self-contained true \
+    -p:PublishSingleFile=true \
+    -p:PublishTrimmed=true
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-jammy-chiseled
+WORKDIR /app
+COPY --from=build /app .
+USER $APP_UID
+CMD ["./presentation"]
+

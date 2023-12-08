@@ -6,6 +6,8 @@ namespace application.Mapper;
 
 public static class ItemListMapper
 {
+    #region MapListItemresponses
+
     private static Task<List<ListItemResponse>> MapListItemResponses(
         List<ItemListItemActionDbModel> itemListItemActions, ItemsService itemsService)
     {
@@ -89,6 +91,10 @@ public static class ItemListMapper
         return listItemResponse;
     }
 
+    #endregion
+
+    #region ListSnapshotResponse
+
     private static ListSnapshotResponse ListSnapshotResponse(ItemListSnapshotDbModel itemListSnapshot,
         List<ItemListItemActionDbModel> listActions)
     {
@@ -168,6 +174,9 @@ public static class ItemListMapper
         return Task.FromResult(result);
     }
 
+    #endregion
+
+
     public static async Task<ListResponse> MapToListResponse(
         ItemListDbModel itemListDbModel,
         List<ItemListSnapshotDbModel> itemListSnapshots,
@@ -175,8 +184,7 @@ public static class ItemListMapper
         ItemsService itemsService)
     {
         var mapListItemResponsesTask = MapListItemResponses(itemListItemActions, itemsService);
-        var mapListSnapshotResponsesTask =  MapListSnapshotResponses(itemListSnapshots, itemListItemActions);
-
+        var mapListSnapshotResponsesTask = MapListSnapshotResponses(itemListSnapshots, itemListItemActions);
         await Task.WhenAll(mapListItemResponsesTask, mapListSnapshotResponsesTask);
 
         var listResponse = new ListResponse(

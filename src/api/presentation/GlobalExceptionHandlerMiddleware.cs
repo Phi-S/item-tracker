@@ -30,23 +30,17 @@ public class GlobalExceptionHandlerMiddleware(ILogger<GlobalExceptionHandlerMidd
         var statusCode = context.Response.StatusCode;
         var userId = context.User.Id();
 
-        using (logger.BeginScope(new Dictionary<string, object>
-               {
-                   ["HttpContext"] = context,
-               }))
+        if (e is null)
         {
-            if (e is null)
-            {
-                logger.LogInformation(
-                    "[{Protocol} {Method} {Path}] [{TraceId}] [{UserId}] responded {StatusCode} in {ElapsedMilliseconds} ms",
-                    protocol, method, path, traceId, userId, statusCode, elapsedMilliseconds);
-            }
-            else
-            {
-                logger.LogError(e,
-                    "[{Protocol} {Method} {Path}] [{TraceId}] [{UserId}] responded {StatusCode} in {ElapsedMilliseconds} ms",
-                    protocol, method, path, traceId, userId, statusCode, elapsedMilliseconds);
-            }
+            logger.LogInformation(
+                "[{Protocol} {Method} {Path}] [{TraceId}] [{UserId}] responded {StatusCode} in {ElapsedMilliseconds} ms",
+                protocol, method, path, traceId, userId, statusCode, elapsedMilliseconds);
+        }
+        else
+        {
+            logger.LogError(e,
+                "[{Protocol} {Method} {Path}] [{TraceId}] [{UserId}] responded {StatusCode} in {ElapsedMilliseconds} ms",
+                protocol, method, path, traceId, userId, statusCode, elapsedMilliseconds);
         }
     }
 
