@@ -105,7 +105,7 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
 
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, userInfo.Value.Nickname),
+                new Claim(ClaimTypes.Name, userInfo.Value.PreferredUsername),
                 new Claim(ClaimTypes.Email, userInfo.Value.Email),
                 new Claim("sub", userInfo.Value.Sub),
                 new Claim("access_token", token.AccessToken)
