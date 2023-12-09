@@ -11,7 +11,9 @@ def main():
     print(f"{working_directory=}")
     docker_image_name = "item-tracker"
     docker_image_name_api = f"{docker_image_name}-api"
+    docker_image_dockerfile_api = "Dockerfile_api"
     docker_image_name_web = f"{docker_image_name}-web"
+    docker_image_dockerfile_web = "Dockerfile_web"
 
     args: list[str] = sys.argv[1:]
     build_version = get_arg_value(args, "-BUILD_VERSION")
@@ -22,11 +24,11 @@ def main():
 
     docker_image_name_with_version_instance = f"{docker_image_name_api}:{build_version}"
     print(f"Building {docker_image_name_with_version_instance} docker image")
-    build(docker_image_name_with_version_instance, "Dockerfile_instance")
+    build(docker_image_name_with_version_instance, docker_image_dockerfile_api)
 
     docker_image_name_with_version_web = f"{docker_image_name_web}:{build_version}"
     print(f"Building {docker_image_name_with_version_web} docker image")
-    build(docker_image_name_with_version_web, "Dockerfile_web")
+    build(docker_image_name_with_version_web, docker_image_dockerfile_web)
 
     should_publish = "-PUBLISH" in args
     if not should_publish:
