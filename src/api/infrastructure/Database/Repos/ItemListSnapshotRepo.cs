@@ -42,10 +42,15 @@ public class ItemListSnapshotRepo
             return new CalculateForItemResult(null, null);
         }
 
-        var itemPrice = await _dbContext.Prices.FirstAsync(price =>
+        var itemPrice = await _dbContext.Prices.FirstOrDefaultAsync(price =>
             price.ItemPriceRefresh == itemPriceRefresh &&
             price.ItemId == itemId
         );
+
+        if (itemPrice is null)
+        {
+            return new CalculateForItemResult(null, null);
+        }
 
         long? totalSteamPrice;
         long? totalBuff163Price;
