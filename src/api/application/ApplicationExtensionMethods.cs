@@ -1,4 +1,5 @@
 ﻿using application.BackgroundServices;
+using application.Cache;
 using application.Commands;
 using infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ public static class ApplicationExtensionMethods
         serviceCollection.AddScoped<ListCommandService>();
         serviceCollection.AddScoped<PriceCommandService>();
         serviceCollection.AddScoped<ItemCommandService>();
+        serviceCollection.AddSingleton<ListResponseCacheService>();
         serviceCollection.AddHostedService<RefreshPricesBackgroundService>();
         return serviceCollection;
     }

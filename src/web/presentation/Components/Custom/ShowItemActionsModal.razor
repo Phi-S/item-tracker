@@ -1,0 +1,87 @@
+﻿@using BlazorBootstrap
+@using presentation.Authentication
+@using presentation.BlazorExtensions
+@using presentation.ItemTrackerApi
+@using shared.Currencies
+@using shared.Models.ListResponse
+
+<ConfirmDialog @ref="_deleteActionConfirmDialogRef" Class="text-center" Style="z-index: 5000"/>
+<Modal @ref="Modal" IsVerticallyCentered="true" HeaderCssClass="bg-dark">
+    <HeaderTemplate>
+        <div class="text-center w-100" style="color: white">@_item?.ItemName entries</div>
+    </HeaderTemplate>
+    <BodyTemplate>
+        <table class="table table-striped w-100 text-center align-middle">
+            <tbody>
+            @if (_item is not null)
+            {
+                foreach (var action in _item.Actions)
+                {
+                    <tr>
+                        <td>
+                            @if (action.Action.Equals("B"))
+                            {
+                                <span style="color: green">Buy</span>
+                            }
+                            else if (action.Action.Equals("S"))
+                            {
+                                <span style="color: red">Sell</span>
+                            }
+                        </td>
+                        <td>@action.CreatedAt.AddHours(_browserDateTimeOffset)</td>
+                        <td>@action.Amount</td>
+                        <td>@CurrencyHelper.FormatCurrency(List.Currency, action.Price)</td>
+                        <td>
+                            <button class="btn bi bi-x-lg" @onclick="() => DeleteItemAction(action)"></button>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="Modal.HideAsync">Close</Button>
+    </FooterTemplate>
+</Modal>
+
+@code{
+    [Inject] CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] IJSRuntime JsRuntime { get; set; } = default!;
+    [Inject] ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
+    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
+
+    private Modal Modal { get; set; } = default!;
+    private ConfirmDialog _deleteActionConfirmDialogRef = default!;
+    private ListItemResponse? _item = null;
+
+    private int _browserDateTimeOffset = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _browserDateTimeOffset = await JsRuntime.GetBrowserTimezoneOffsetInH();
+        await base.OnInitializedAsync();
+    }
+
+    public async Task Show(ListItemResponse item)
+    {
+        _item = item;
+        await Modal.ShowAsync();
+    }
+
+    private async Task DeleteItemAction(ListItemActionResponse action)
+    {
+        var buySellString = action.Action.Equals("B") ? "Buy" : "Sell";
+        var confirmation = await _deleteActionConfirmDialogRef.ShowAsync(
+            "Are you sure you want to delete this entry",
+            $"{buySellString} | {action.CreatedAt.AddHours(_browserDateTimeOffset)} | {action.Amount} | {CurrencyHelper.FormatCurrency(List.Currency, action.Price)}",
+            "If you delete an entry it will no longer be used to calculate any dependent values (for example: Average buy price or Profit). Only delete entries if absolutely necessary"
+        );
+        if (confirmation)
+        {
+            Console.WriteLine("Delete action...");
+            // TODO: 
+        }
+    }
+
+}

@@ -56,7 +56,7 @@ public class ItemListSnapshotRepo
         long? totalBuff163Price;
         if (currency.Equals(CurrenciesConstants.EURO))
         {
-            var eurToUsdExchangeRate = itemPriceRefresh.EurToUsdExchangeRate;
+            var eurToUsdExchangeRate = itemPriceRefresh.UsdToEurExchangeRate;
             totalSteamPrice = itemPrice.SteamPriceCentsUsd is null
                 ? null
                 : (long)Math.Round(itemPrice.SteamPriceCentsUsd.Value * eurToUsdExchangeRate, 0) * itemCount;

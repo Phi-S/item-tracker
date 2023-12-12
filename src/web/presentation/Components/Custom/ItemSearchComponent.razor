@@ -6,14 +6,13 @@
 
 <style>
     .searchResults {
+        background-color: #212529;
         z-index: 1100;
         overflow-y: scroll;
         overflow-x: hidden;
         scrollbar-color: darkgrey #212529;
         max-height: 20rem;
-        height: 20rem;
-        max-width: 30rem;
-        width: 30rem;
+        margin-top: 2.5rem;
     }
 </style>
 
@@ -28,17 +27,29 @@
             @oninput="OnInput"
             @onfocusin="ShowSearchResponses"
             @onfocusout="HideSearchResponses"/>
-    </div>
 
-    <div class="position-fixed border border-2 border-light searchResults @HideSearchResponsesClass">
-        @foreach (var searchResult in ItemSearchResponses)
-        {
-            <div class="row">
-                <button @onclick="() => OnSelect(searchResult)">
-                    <img style="width: 70px" src="@searchResult.Image" alt=""/>
-                    @searchResult.Name
-                </button>
-            </div>
-        }
+        <div class="position-absolute border border-2 searchResults @HideSearchResponsesClass">
+            @if (ItemSearchResponses is not null)
+            {
+                @if (ItemSearchResponses.Count == 0)
+                {
+                    <div class="row d-flex text-center w-100" style="height: 2rem; text-align: center;">
+                        <span>No results</span>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var searchResult in ItemSearchResponses)
+                    {
+                        <div class="row">
+                            <button @onclick="() => OnSelect(searchResult)">
+                                <img style="width: 70px" src="@searchResult.Image" alt=""/>
+                                @searchResult.Name
+                            </button>
+                        </div>
+                    }
+                }
+            }
+        </div>
     </div>
 </div>

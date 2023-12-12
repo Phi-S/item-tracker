@@ -1,35 +1,38 @@
 ﻿using ErrorOr;
 using infrastructure.Database.Models;
 using Microsoft.EntityFrameworkCore;
+using Throw;
 
 namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
-    public async Task<List<Tuple<ItemListDbModel, List<ItemListSnapshotDbModel>, List<ItemListItemActionDbModel>>>>
-        GetListInfosForUserId(string userId)
+    public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
     {
-        var result =
-            dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
-                .Select(list => Tuple.Create(
-                    list,
-                    dbContext.ListSnapshots.Where(value => value.List.Id == list.Id).ToList(),
-                    dbContext.ItemActions.Where(item => item.List.Id == list.Id).ToList()
-                )).ToList();
-        return await Task.FromResult(result);
+        return Task.FromResult(dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
+            .ToList());
     }
 
-    public (ItemListDbModel list, List<ItemListSnapshotDbModel> listValues, List<ItemListItemActionDbModel> items)
-        GetListInfos(long listId)
+    public async
+        Task<(
+            ItemListDbModel List,
+            List<ItemListSnapshotDbModel> Snapshots,
+            List<ItemListItemActionDbModel> ItemActions,
+            ItemPriceRefreshDbModel LastPriceRefresh,
+            List<ItemPriceDbModel> PricesForItemsInList
+            )> GetListInfos(
+            long listId)
     {
-        var result =
-            dbContext.Lists.Where(list => list.Deleted == false && list.Id == listId)
-                .Select(list => Tuple.Create(
-                    list,
-                    dbContext.ListSnapshots.Where(value => value.List.Id == list.Id).ToList(),
-                    dbContext.ItemActions.Where(item => item.List.Id == list.Id).ToList()
-                )).Take(1).First();
-        return (result.Item1, result.Item2, result.Item3);
+        var list = await dbContext.Lists.FindAsync(listId);
+        list.ThrowIfNull().Throw().IfTrue(list.Deleted);
+        var snapshots = dbContext.ListSnapshots.Where(snapshot => snapshot.List.Id == listId).ToList();
+        var itemAction = dbContext.ItemActions.Where(action => action.List.Id == listId).ToList();
+        var lastPriceRefresh = await dbContext.PricesRefresh.OrderByDescending(priceRefresh => priceRefresh.CreatedUtc).FirstAsync();
+        var itemsInListIds = itemAction.GroupBy(action => action.ItemId).Select(group => group.Key);
+        var pricesForItemsInList = dbContext.Prices.Where(price =>
+            price.ItemPriceRefresh.Id == lastPriceRefresh.Id && itemsInListIds.Contains(price.ItemId)).ToList();
+
+        return (list, snapshots, itemAction, lastPriceRefresh, pricesForItemsInList);
     }
 
     public async Task<bool> ExistsWithNameForUser(string userId, string listName)
@@ -135,6 +138,13 @@ public class ItemListRepo(XDbContext dbContext)
         await dbContext.ItemActions.AddAsync(listItem);
     }
 
+    public async Task DeleteItemAction(ItemListDbModel list, long itemActionId)
+    {
+        var actionToDelete =
+            await dbContext.ItemActions.FirstAsync(action => action.Id == itemActionId && action.List.Id == list.Id);
+        dbContext.ItemActions.Remove(actionToDelete);
+    }
+
     public async Task UpdateName(long listId, string newListName)
     {
         await dbContext.Lists
@@ -160,5 +170,10 @@ public class ItemListRepo(XDbContext dbContext)
             .ExecuteUpdateAsync(b =>
                 b.SetProperty(l => l.Public, newPublic)
             );
+    }
+
+    public async Task<ItemListItemActionDbModel> GetItemActionById(long actionId)
+    {
+        return await dbContext.ItemActions.FirstAsync(action => action.Id == actionId);
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using BlazorBootstrap;
+using Microsoft.AspNetCore.Components;
 using presentation.Authentication;
 using presentation.Components.Custom;
 using presentation.ItemTrackerApi;
@@ -16,22 +17,25 @@ public class ListRazor : ComponentBase
 
     [Parameter, EditorRequired] public string ListUrl { get; set; } = null!;
 
-    protected ListResponse? List;
-
-    protected ListDisplay ListDisplayRef { get; set; } = null!;
-    protected Modal AddEntryModalRef { get; set; } = null!;
-    protected ItemSearchComponent AddEntrySearchComponentRef { get; set; } = null!;
-
     protected ErrorComponent ErrorComponentRef = null!;
-    protected string? ErrorMessage;
+    protected ListDisplay ListDisplayRef { get; set; } = null!;
+    protected AddItemActionModal AddItemActionModalRef { get; set; } = default!;
+    protected ShowItemActionsModal ShowItemActionsModalRef { get; set; } = default!;
 
 
-    protected long? AddEntryAmount;
-    protected decimal? AddEntryPrice;
+    protected ListResponse? List;
 
     protected override async Task OnInitializedAsync()
     {
         await GetList();
+        AddItemActionModalRef.ItemActionAdded += async (_, _) =>
+        {
+            await GetList();
+            if (List is not null)
+            {
+                await ListDisplayRef.UpdateDiagram(List);
+            }
+        };
     }
 
     private async Task GetList()
@@ -48,111 +52,18 @@ public class ListRazor : ComponentBase
         StateHasChanged();
     }
 
-    protected void OpenModalBuyEntry()
+    protected async Task AddBuyAction()
     {
-        ErrorMessage = null;
-        AddEntrySearchComponentRef.Reset();
-        OpenNewEntryModal(true);
+        await AddItemActionModalRef.ShowBuy();
     }
 
-    protected void OpenModalSellEntry(ListItemResponse item)
+    protected async Task AddSellAction(ListItemResponse item)
     {
-        ErrorMessage = null;
-        AddEntrySearchComponentRef.Reset(
-            new ItemSearchResponse(item.ItemId, item.ItemName, item.ItemImage),
-            true
-        );
-        OpenNewEntryModal(false);
+        await AddItemActionModalRef.ShowSell(item);
     }
 
-    private void OpenNewEntryModal(bool buySell)
+    protected async Task ShowItemActions(ListItemResponse item)
     {
-        AddEntryAmount = null;
-        AddEntryPrice = null;
-        var buySellString = buySell ? "Buy" : "Sell";
-        AddEntryModalRef.Title = $"{buySellString}";
-        AddEntryModalRef.OkButtonString = AddEntryModalRef.Title;
-        AddEntryModalRef.OkButtonAction = async () =>
-        {
-            List.ThrowIfNull();
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                ErrorMessage = "No access token found";
-                return;
-            }
-
-            var selectedItem = AddEntrySearchComponentRef.SelectedItemSearchResponse;
-            var amount = AddEntryAmount;
-            var price = AddEntryPrice;
-            if (selectedItem is null)
-            {
-                ErrorMessage = "No item selected";
-                return;
-            }
-
-            if (amount is null or <= 0)
-            {
-                ErrorMessage = "No amount entered";
-                return;
-            }
-
-            if (price is null or <= 0)
-            {
-                ErrorMessage = "No price entered";
-                return;
-            }
-
-            var unitPrice = CurrencyHelper.CurrencyToSmallestUnit(List.Currency, price.Value);
-            if (buySell)
-            {
-                var buyItem = await ItemTrackerApiService.BuyItem(
-                    accessToken,
-                    ListUrl,
-                    selectedItem.Id,
-                    amount.Value,
-                    unitPrice
-                );
-                if (buyItem.IsError)
-                {
-                    ErrorMessage = $"{buyItem.FirstError.Description}";
-                    return;
-                }
-            }
-            else
-            {
-                var itemInList = List?.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
-                if (itemInList is null)
-                {
-                    ErrorMessage = "You can't sell an item you dont have";
-                    return;
-                }
-
-                if (amount > itemInList.AmountInvested)
-                {
-                    ErrorMessage = "You can't sell more items than the list contains";
-                    return;
-                }
-
-                var sellItem = await ItemTrackerApiService.SellItem(
-                    accessToken,
-                    ListUrl,
-                    selectedItem.Id,
-                    amount.Value,
-                    unitPrice
-                );
-                if (sellItem.IsError)
-                {
-                    ErrorMessage = $"{sellItem.FirstError.Description}";
-                    return;
-                }
-            }
-
-            AddEntryModalRef.Close();
-            await GetList();
-            await ListDisplayRef.UpdateDiagram(List!);
-        };
-
-        AddEntryModalRef.Open();
+        await ShowItemActionsModalRef.Show(item);
     }
 }

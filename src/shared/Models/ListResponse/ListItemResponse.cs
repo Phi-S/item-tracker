@@ -29,6 +29,10 @@ public record ListItemResponse(
     // CurrentAverageBuyPrice == The average buy price since the last time the item amount was 0
     [property: JsonRequired, JsonPropertyName("average_buy_price")]
     long AverageBuyPrice,
+    [property: JsonRequired, JsonPropertyName("steam_sell_price")]
+    long? SteamSellPrice,
+    [property: JsonRequired, JsonPropertyName("buff163_sell_price")]
+    long? Buff163SellPrice,
     [property: JsonRequired, JsonPropertyName("sales_value")]
     long SalesValue,
     [property: JsonRequired, JsonPropertyName("profit")]

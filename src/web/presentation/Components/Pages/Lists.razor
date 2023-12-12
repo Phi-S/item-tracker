@@ -4,7 +4,7 @@
 
 @attribute [Authorize]
 
-<Modal @ref="NewListModalRef" Title="Create new list" OkButtonString="Create list" OkButtonAction="NewList">
+<ModalCustom @ref="NewListModalCustomRef" Title="Create new list" OkButtonString="Create list" OkButtonAction="NewList">
     <div class="mb-2">
         <input @bind="NewListModel.ListName" class="form-control" type="text" placeholder="List name">
     </div>
@@ -22,7 +22,7 @@
         <input @bind="NewListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
         <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
     </div>
-</Modal>
+</ModalCustom>
 
 <ErrorComponent @ref="ErrorComponentRef">
     <div class="w-100 h-100">

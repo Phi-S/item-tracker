@@ -17,79 +17,12 @@ public class ItemListRepoTest
     }
 
     [Fact]
-    public async Task GetListInfosForUserIdTest()
-    {
-        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
-        await using var provider = serviceCollection.BuildServiceProvider();
-        var dbContext = provider.GetRequiredService<XDbContext>();
-        var userId = "test_user";
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
-        {
-            Id = 1,
-            UserId = userId,
-            Name = "test_list",
-            Url = "test_url",
-            Currency = "EUR",
-            Public = false,
-            Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
-        });
-
-        var priceRefresh = await dbContext.PricesRefresh.AddAsync(new ItemPriceRefreshDbModel
-        {
-            Id = 1,
-            SteamPricesLastModified = default,
-            Buff163PricesLastModified = default,
-            CreatedUtc = default,
-            EurToUsdExchangeRate = 1
-        });
-
-        var listValue = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
-        {
-            Id = 1,
-            List = list.Entity,
-            SteamValue = 1,
-            BuffValue = 1,
-            ItemPriceRefresh = priceRefresh.Entity,
-            CreatedUtc = default
-        });
-
-        var itemAction = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
-        {
-            Id = 1,
-            List = list.Entity,
-            ItemId = 1,
-            Action = "B",
-            UnitPrice = 1,
-            Amount = 1,
-            CreatedUtc = default
-        });
-        await dbContext.SaveChangesAsync();
-
-        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
-        var itemListRepo = unitOfWork.ItemListRepo;
-
-        var listInfos = await itemListRepo.GetListInfosForUserId(userId);
-        Assert.True(listInfos.Count == 1);
-        var listInfo = listInfos.First();
-        Assert.True(listInfo.Item1.Id == list.Entity.Id);
-        Assert.Equal(userId, listInfo.Item1.UserId);
-
-        Assert.True(listInfo.Item2.Count == 1);
-        Assert.True(listInfo.Item2.First().Id == listValue.Entity.Id);
-
-        Assert.True(listInfo.Item3.Count == 1);
-        Assert.True(listInfo.Item3.First().Id == itemAction.Entity.Id);
-    }
-
-    [Fact]
     public async Task GetListInfosTest()
     {
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        long listId = 5;
+        const long listId = 5;
         var list = await dbContext.Lists.AddAsync(new ItemListDbModel
         {
             Id = listId,
@@ -109,10 +42,19 @@ public class ItemListRepoTest
             SteamPricesLastModified = default,
             Buff163PricesLastModified = default,
             CreatedUtc = default,
-            EurToUsdExchangeRate = 1
+            UsdToEurExchangeRate = 1
         });
 
-        var listValue = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
+        var price = await dbContext.AddAsync(new ItemPriceDbModel
+        {
+            Id = 1,
+            ItemId = 1,
+            SteamPriceCentsUsd = null,
+            Buff163PriceCentsUsd = null,
+            ItemPriceRefresh = priceRefresh.Entity
+        });
+
+        var snapshot = await dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
         {
             Id = 1,
             List = list.Entity,
@@ -137,15 +79,20 @@ public class ItemListRepoTest
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
         var itemListRepo = unitOfWork.ItemListRepo;
 
-        var listInfo = itemListRepo.GetListInfos(listId);
-        Assert.True(listInfo.list.Id == list.Entity.Id);
+        var listInfo = await itemListRepo.GetListInfos(listId);
+        Assert.True(listInfo.List.Id == list.Entity.Id);
         Assert.Equal(listId, listInfo.Item1.Id);
 
-        Assert.True(listInfo.listValues.Count == 1);
-        Assert.True(listInfo.listValues.First().Id == listValue.Entity.Id);
+        Assert.Single(listInfo.Snapshots);
+        Assert.Equal(snapshot.Entity.Id, listInfo.Snapshots.First().Id);
 
-        Assert.True(listInfo.items.Count == 1);
-        Assert.True(listInfo.items.First().Id == itemAction.Entity.Id);
+        Assert.Single(listInfo.ItemActions);
+        Assert.Equal(itemAction.Entity.Id, listInfo.ItemActions.First().Id);
+
+        Assert.Equal(priceRefresh.Entity.Id, listInfo.LastPriceRefresh.Id);
+
+        Assert.Single(listInfo.PricesForItemsInList);
+        Assert.Equal(price.Entity.Id, listInfo.PricesForItemsInList.First().Id);
     }
 
     [Fact]

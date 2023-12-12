@@ -1,7 +1,9 @@
 ﻿using BlazorBootstrap;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using presentation.Authentication;
 using presentation.BlazorExtensions;
+using presentation.ItemTrackerApi;
 using shared.Currencies;
 using shared.Models.ListResponse;
 using Throw;
@@ -10,11 +12,15 @@ namespace presentation.Components.Custom;
 
 public class ListDisplayRazor : ComponentBase
 {
-    [Parameter] [EditorRequired] public ListResponse List { get; set; } = null!;
+    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
     [Parameter] public bool DisplayGoToListButton { get; set; } = true;
-    [Inject] public NavigationManager NavigationManager { get; set; } = null!;
-    [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
+    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] public NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] public IJSRuntime JsRuntime { get; set; } = default!;
+    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
+    [Inject] protected ToastService ToastService { get; set; } = default!;
 
+    protected ConfirmDialog ConfirmDialog = default!;
     protected LineChart LineChart = default!;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -36,7 +42,7 @@ public class ListDisplayRazor : ComponentBase
         var buffPriceValues = new List<double>();
         var investedCapitalValues = new List<double>();
 
-        if (List.ListSnapshots.Any())
+        if (List.ListSnapshots.Count != 0)
         {
             foreach (var listValue in listResponse.ListSnapshots)
             {
@@ -67,9 +73,9 @@ public class ListDisplayRazor : ComponentBase
                 BorderColor = new List<string> { "#b3bab5" },
                 BorderWidth = new List<double> { 2 },
                 HoverBorderWidth = new List<double> { 4 },
-                PointBackgroundColor = new List<string> { "#b3bab5" },
-                PointRadius = new List<int> { 5 },
-                PointHoverRadius = new List<int> { 8 }
+                PointBackgroundColor = ["#b3bab5"],
+                PointRadius = [5],
+                PointHoverRadius = [8]
             },
             new LineChartDataset
             {
@@ -78,9 +84,9 @@ public class ListDisplayRazor : ComponentBase
                 BorderColor = new List<string> { "#fcba03" },
                 BorderWidth = new List<double> { 2 },
                 HoverBorderWidth = new List<double> { 4 },
-                PointBackgroundColor = new List<string> { "#fcba03" },
-                PointRadius = new List<int> { 5 },
-                PointHoverRadius = new List<int> { 8 }
+                PointBackgroundColor = ["#fcba03"],
+                PointRadius = [5],
+                PointHoverRadius = [8]
             },
             new LineChartDataset
             {
@@ -89,9 +95,9 @@ public class ListDisplayRazor : ComponentBase
                 BorderColor = new List<string> { "#4842f5" },
                 BorderWidth = new List<double> { 2 },
                 HoverBorderWidth = new List<double> { 4 },
-                PointBackgroundColor = new List<string> { "#4842f5" },
-                PointRadius = new List<int> { 5 },
-                PointHoverRadius = new List<int> { 8 }
+                PointBackgroundColor = ["#4842f5"],
+                PointRadius = [5],
+                PointHoverRadius = [8]
             }
         };
 
@@ -169,8 +175,74 @@ public class ListDisplayRazor : ComponentBase
         StateHasChanged();
     }
 
-    protected void NavigateToList()
+    protected async Task MakeListPublic()
     {
-        NavigationManager.NavigateTo($"/list/{List.Url}");
+        var confirmation = await ConfirmDialog.ShowAsync(
+            "Are you sure you want to make the list public",
+            "Public lists can be seen by everyone"
+        );
+        if (confirmation)
+        {
+            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+            var makeListPublic = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, true);
+            if (makeListPublic.IsError)
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Danger,
+                    $"Failed to set list to public. {makeListPublic.FirstError.Description}"));
+            }
+            else
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Dark, $"List \"{List.Name}\" is now public"));
+                List = List with { Public = true };
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected async Task MakeListPrivate()
+    {
+        var confirmation = await ConfirmDialog.ShowAsync(
+            $"Are you sure you want to make the list \"{List.Name}\" private",
+            "Private lists can only be seen by yourself"
+        );
+        if (confirmation)
+        {
+            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+            var makeListPrivate = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, false);
+            if (makeListPrivate.IsError)
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Danger,
+                    $"Failed to set list \"{List.Name}\" to private. {makeListPrivate.FirstError.Description}"));
+            }
+            else
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Dark, $"List \"{List.Name}\" is now private"));
+                List = List with { Public = false };
+                StateHasChanged();
+            }
+        }
+    }
+
+    protected async Task DeleteList()
+    {
+        var confirmation = await ConfirmDialog.ShowAsync(
+            "Are you sure you want to delete this list",
+            $"List name: {List.Name}"
+        );
+        if (confirmation)
+        {
+            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+            var deleteList = await ItemTrackerApiService.Delete(accessToken, List.Url);
+            if (deleteList.IsError)
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Danger,
+                    $"Failed to delete list \"{List.Name}\". {deleteList.FirstError.Description}"));
+            }
+            else
+            {
+                ToastService.Notify(new ToastMessage(ToastType.Dark, $"List \"{List.Name}\" deleted"));
+                NavigationManager.NavigateToLists();
+            }
+        }
     }
 }

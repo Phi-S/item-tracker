@@ -1,11 +1,14 @@
 ﻿@using shared.Models.ListResponse
 @using BlazorBootstrap
+@using presentation.BlazorExtensions
 @using presentation.Helper
 @using shared.Currencies
 @inherits ListDisplayRazor
 
+<ConfirmDialog @ref="ConfirmDialog"/>
+
 <div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
-    <button class="col-3 h-100 container btn border-end rounded-0" @onclick="NavigateToList">
+    <button class="col-3 h-100 container btn border-end rounded-0" @onclick="() => NavigationManager.NavigateToList(List.Url)">
         <div class="row row-cols-2 justify-content-center text-decoration-underline p-1" style="height: 15%">
             @List.Name
         </div>
@@ -23,11 +26,30 @@
     </button>
 
     <div class="@(DisplayGoToListButton ? "col-8" : "col-9") h-100 p-0">
+        <div class="position-relative d-flex z-3 justify-content-end dropstart">
+            <button class="btn-dropdown bi bi-gear position-absolute pt-2" data-bs-toggle="dropdown" aria-expanded="false">
+            </button>
+            <ul class="dropdown-menu text-center">
+                <li class="border-bottom">
+                    @if (List.Public)
+                    {
+                        <button class="btn-dropdown w-100" @onclick="MakeListPrivate">Make list private</button>
+                    }
+                    else
+                    {
+                        <button class="btn-dropdown w-100" @onclick="MakeListPublic">Make list public</button>
+                    }
+                </li>
+                <li>
+                    <button class="btn-dropdown w-100" style="color: red" @onclick="DeleteList">Delete list</button>
+                </li>
+            </ul>
+        </div>
         <LineChart @ref="LineChart" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
     </div>
 
     @if (DisplayGoToListButton)
     {
-        <button class="col-1 btn bi-play-fill m-0 p-0" @onclick="NavigateToList"></button>
+        <button class="col-1 btn bi-play-fill m-0 p-0" @onclick="() => NavigationManager.NavigateToList(List.Url)"></button>
     }
 </div>

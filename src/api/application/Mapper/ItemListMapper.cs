@@ -1,6 +1,9 @@
 ﻿using infrastructure.Database.Models;
+using infrastructure.ExchangeRates;
 using infrastructure.Items;
+using shared.Currencies;
 using shared.Models.ListResponse;
+using Throw;
 
 namespace application.Mapper;
 
@@ -9,34 +12,93 @@ public static class ItemListMapper
     #region MapListItemresponses
 
     private static Task<List<ListItemResponse>> MapListItemResponses(
-        List<ItemListItemActionDbModel> itemListItemActions, ItemsService itemsService)
+        ItemListDbModel list,
+        List<ItemListItemActionDbModel> itemActions,
+        ItemsService itemsService,
+        ItemPriceRefreshDbModel priceRefresh,
+        List<ItemPriceDbModel> prices)
     {
         var result = new List<ListItemResponse>();
-        foreach (var itemListItemActionsGroup in itemListItemActions.GroupBy(action => action.ItemId))
+        foreach (var itemActionsGroupByItemId in itemActions.GroupBy(action => action.ItemId))
         {
-            var itemInfoResult = itemsService.GetById(itemListItemActionsGroup.Key);
-            if (itemInfoResult.IsError)
+            var itemId = itemActionsGroupByItemId.Key;
+            var itemResult = itemsService.GetById(itemId);
+            if (itemResult.IsError)
             {
-                throw new Exception(itemInfoResult.FirstError.Description);
+                throw new Exception("ItemId is not valid");
             }
 
-            var item = MapListItemResponse(itemInfoResult.Value, itemListItemActionsGroup.ToList());
+            var item = MapListItemResponse(
+                list,
+                itemResult.Value,
+                itemActionsGroupByItemId,
+                priceRefresh,
+                prices
+            );
             result.Add(item);
         }
 
         return Task.FromResult(result);
     }
 
-    public static ListItemResponse MapListItemResponse(ItemModel item, List<ItemListItemActionDbModel> itemActions)
+    public static ListItemResponse MapListItemResponse(
+        ItemListDbModel list,
+        ItemModel item,
+        IEnumerable<ItemListItemActionDbModel> itemActionsForItem,
+        ItemPriceRefreshDbModel priceRefresh,
+        IEnumerable<ItemPriceDbModel> pricesForItem)
     {
+        var priceForItem = pricesForItem.First(price =>
+            price.ItemPriceRefresh.Id == priceRefresh.Id && price.ItemId == item.Id);
+        long? steamSellPrice;
+        long? buff163SellPrice;
+
+        if (CurrencyHelper.IsCurrencyValid(list.Currency) == false)
+        {
+            throw new UnknownCurrencyException(list.Currency);
+        }
+
+        if (list.Currency.Equals(CurrenciesConstants.USD))
+        {
+            steamSellPrice = priceForItem.SteamPriceCentsUsd;
+            buff163SellPrice = priceForItem.Buff163PriceCentsUsd;
+        }
+        else if (list.Currency.Equals(CurrenciesConstants.EURO))
+        {
+            steamSellPrice = priceForItem.SteamPriceCentsUsd is null
+                ? null
+                : ExchangeRateHelper.ApplyExchangeRate(priceRefresh.UsdToEurExchangeRate,
+                    priceForItem.SteamPriceCentsUsd.Value);
+            buff163SellPrice = priceForItem.Buff163PriceCentsUsd is null
+                ? null
+                : ExchangeRateHelper.ApplyExchangeRate(priceRefresh.UsdToEurExchangeRate,
+                    priceForItem.Buff163PriceCentsUsd.Value);
+        }
+        else
+        {
+            throw new NotImplementedException($"Currency \"{list.Currency}\" is not implemented");
+        }
+
         var itemActionResponses = new List<ListItemActionResponse>();
         var buyPrices = new List<long>();
         long salesValue = 0;
         long profit = 0;
         var amountInvested = 0;
         var gotSales = false;
-        foreach (var itemAction in itemActions.OrderBy(action => action.CreatedUtc))
+        foreach (var itemAction in itemActionsForItem.OrderBy(action => action.CreatedUtc))
         {
+            if (itemAction.List.Id != list.Id)
+            {
+                throw new Exception(
+                    $"Action is for the list with the id \"{itemAction.List.Id}\" but it should be for the list with the id \"{list.Id}\"");
+            }
+
+            if (itemAction.ItemId != item.Id)
+            {
+                throw new Exception(
+                    $"Action itemId \"{itemAction.ItemId}\" dose not match the required itemId \"{item.Id}\"");
+            }
+
             var actionResponse = new ListItemActionResponse(
                 itemAction.Id,
                 itemAction.Action,
@@ -84,6 +146,8 @@ public static class ItemListMapper
             capitalInvested,
             amountInvested,
             averageBuyPrice,
+            steamSellPrice,
+            buff163SellPrice,
             salesValue,
             profit,
             itemActionResponses
@@ -95,7 +159,8 @@ public static class ItemListMapper
 
     #region ListSnapshotResponse
 
-    private static ListSnapshotResponse ListSnapshotResponse(ItemListSnapshotDbModel itemListSnapshot,
+    private static ListSnapshotResponse ListSnapshotResponse(
+        ItemListSnapshotDbModel itemListSnapshot,
         List<ItemListItemActionDbModel> listActions)
     {
         long totalInvestedCapital = 0;
@@ -165,7 +230,6 @@ public static class ItemListMapper
             return Task.FromResult(result);
         }
 
-
         foreach (var snapshot in listSnapshots.OrderBy(value => value.CreatedUtc))
         {
             result.Add(ListSnapshotResponse(snapshot, listActions));
@@ -181,9 +245,17 @@ public static class ItemListMapper
         ItemListDbModel itemListDbModel,
         List<ItemListSnapshotDbModel> itemListSnapshots,
         List<ItemListItemActionDbModel> itemListItemActions,
-        ItemsService itemsService)
+        ItemsService itemsService,
+        ItemPriceRefreshDbModel priceRefresh,
+        List<ItemPriceDbModel> prices)
     {
-        var mapListItemResponsesTask = MapListItemResponses(itemListItemActions, itemsService);
+        var mapListItemResponsesTask = MapListItemResponses(
+            itemListDbModel,
+            itemListItemActions,
+            itemsService,
+            priceRefresh,
+            prices
+        );
         var mapListSnapshotResponsesTask = MapListSnapshotResponses(itemListSnapshots, itemListItemActions);
         await Task.WhenAll(mapListItemResponsesTask, mapListSnapshotResponsesTask);
 

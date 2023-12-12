@@ -16,7 +16,7 @@ public class ListsRazor : ComponentBase
     [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = null!;
 
     protected ErrorComponent ErrorComponentRef { get; set; } = null!;
-    protected Modal NewListModalRef { get; set; } = null!;
+    protected ModalCustom NewListModalCustomRef { get; set; } = null!;
     protected List<ListResponse>? Lists;
 
     protected NewListModel NewListModel = new();
@@ -64,6 +64,6 @@ public class ListsRazor : ComponentBase
 
     protected void OpenNewListModal()
     {
-        NewListModalRef.Open();
+        NewListModalCustomRef.Open();
     }
 }

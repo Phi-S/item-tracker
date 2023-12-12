@@ -1,6 +1,8 @@
 ﻿@page "/list/{ListUrl}"
 @using presentation.Authentication
 @using shared.Currencies
+@using Modal = presentation.Components.Custom.ModalCustom
+@using BlazorBootstrap
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
@@ -13,51 +15,8 @@
         <div class="pb-2" style="height: 15rem">
             <ListDisplay @ref="ListDisplayRef" DisplayGoToListButton="false" List="List"/>
         </div>
-        <AuthorizeView>
-            <Authorized>
-                @if (context.User.Claims.UserId().Equals(List.UserId))
-                {
-                    <div class="w-100">
-                        <Modal @ref="AddEntryModalRef">
-                            @if (ErrorMessage is not null)
-                            {
-                                <div class="alert alert-danger">
-                                    @ErrorMessage
-                                </div>
-                            }
-                            <div class="input-group w-100">
-                                <ItemSearchComponent @ref="AddEntrySearchComponentRef"/>
-                            </div>
-
-                            <div class="input-group w-100 text-nowrap flex-nowrap pb-2">
-                                <div class="input-group-text">
-                                    Amount
-                                </div>
-                                <input class="form-control" type="number" @bind="AddEntryAmount"/>
-                            </div>
-                            <div class="input-group w-100 text-nowrap flex-nowrap">
-                                <div class="input-group-text">
-                                    Price for one
-                                </div>
-                                @if (List.Currency.Equals("USD"))
-                                {
-                                    <div class="input-group-text">
-                                        $
-                                    </div>
-                                }
-                                <input class="form-control" type="number" @bind="AddEntryPrice"/>
-                                @if (List.Currency.Equals("EUR"))
-                                {
-                                    <div class="input-group-text">
-                                        €
-                                    </div>
-                                }
-                            </div>
-                        </Modal>
-                    </div>
-                }
-            </Authorized>
-        </AuthorizeView>
+        <AddItemActionModal @ref="AddItemActionModalRef" List="List"></AddItemActionModal>
+        <ShowItemActionsModal @ref="ShowItemActionsModalRef" List="List"></ShowItemActionsModal>
 
         <table class="table table-dark table-striped w-100">
             <thead class="text-center">
@@ -66,9 +25,13 @@
                 <th scope="col">Item</th>
                 <th scope="col">Amount</th>
                 <th scope="col">Avg buy price</th>
-                <th scope="col">Total price</th>
+                <th scope="col">Total buy price</th>
+                <th scope="col">Current sell price</th>
+                <th scope="col">Total sell price</th>
+                <th scope="col">Profit</th>
+                <th scope="col"></th>
                 <th scope="col">
-                    <button class="btn btn-outline-success w-100" @onclick="OpenModalBuyEntry">Add Buy entry</button>
+                    <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">Add Buy entry</button>
                 </th>
             </tr>
             </thead>
@@ -79,20 +42,32 @@
                     <td class="col-1">
                         <img class="" src="@item.ItemImage" alt="" style="object-fit: contain; height: 3rem"/>
                     </td>
-                    <td class="col-4">
+                    <td class="col-2">
                         <span>@item.ItemName</span>
                     </td>
                     <td class="col-1">
                         <span>@item.AmountInvested</span>
                     </td>
-                    <td class="col-2">
+                    <td class="col-1">
                         <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AverageBuyPrice)</span>
                     </td>
                     <td class="col-1">
                         <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AmountInvested * item.AverageBuyPrice)</span>
                     </td>
-                    <td class="col-3">
-                        <button class="btn btn-outline-danger w-100" @onclick="() => OpenModalSellEntry(item)">Sell</button>
+                    <td class="col-1">
+                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.SteamSellPrice ?? 0)</span>
+                    </td>
+                    <td class="col-1">
+                        <span>@CurrencyHelper.FormatCurrency(List.Currency, (item.SteamSellPrice ?? 0) * item.AmountInvested)</span>
+                    </td>
+                    <td class="col-1">
+                        <span>@CurrencyHelper.FormatCurrency(List.Currency, ((item.SteamSellPrice ?? 0) - item.AverageBuyPrice) * item.AmountInvested)</span>
+                    </td>
+                    <td class="col-1">
+                        <button class="btn bi bi-chevron-down" @onclick="() => ShowItemActions(item)"></button>
+                    </td>
+                    <td class="col-2">
+                        <button class="btn btn-outline-danger w-100" @onclick="() => AddSellAction(item)">Add Sell entry</button>
                     </td>
                 </tr>
             }

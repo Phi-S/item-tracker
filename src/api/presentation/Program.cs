@@ -53,7 +53,7 @@ try
     {
         options.AddDefaultPolicy(policy =>
         {
-            policy.WithMethods("GET", "POST", "DELETE");
+            policy.WithMethods("GET", "POST", "PUT", "DELETE");
             policy.WithHeaders("authorization");
             policy.WithHeaders("content-type");
             policy.WithOrigins(corsOrigin);

@@ -1,6 +1,6 @@
-﻿using application.Mapper;
+﻿using application.Cache;
+using application.Mapper;
 using ErrorOr;
-using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
 using infrastructure.Items;
 using shared.Currencies;
@@ -13,12 +13,15 @@ public class ListCommandService
 {
     private readonly ItemsService _itemsService;
     private readonly UnitOfWork _unitOfWork;
-    private const int BuySellLimit = 10000;
+    private readonly ListResponseCacheService _listResponseCacheService;
+    private const int BuySellLimit = 5000;
 
-    public ListCommandService(ItemsService itemsService, UnitOfWork unitOfWork)
+    public ListCommandService(ItemsService itemsService, UnitOfWork unitOfWork,
+        ListResponseCacheService listResponseCacheService)
     {
         _itemsService = itemsService;
         _unitOfWork = unitOfWork;
+        _listResponseCacheService = listResponseCacheService;
     }
 
     public async Task<ErrorOr<List<ListResponse>>> GetAllForUser(string? userId)
@@ -28,15 +31,34 @@ public class ListCommandService
             return Error.Unauthorized(description: "UserId not found");
         }
 
-        var lists = await _unitOfWork.ItemListRepo.GetListInfosForUserId(userId);
+        var cachedListResponses = new List<ListResponse>();
+        var lists = await _unitOfWork.ItemListRepo.GetAllListsForUser(userId);
         var mapToListResponseTasks = new List<Task<ListResponse>>();
-        foreach (var (list, values, items) in lists)
+        foreach (var list in lists)
         {
-            mapToListResponseTasks.Add(ItemListMapper.MapToListResponse(list, values, items, _itemsService));
+            var cacheResponse = _listResponseCacheService.GetListResponse(list.Url);
+            if (cacheResponse.IsError)
+            {
+                var listInfo = await _unitOfWork.ItemListRepo.GetListInfos(list.Id);
+                mapToListResponseTasks.Add(ItemListMapper.MapToListResponse(list, listInfo.Snapshots,
+                    listInfo.ItemActions,
+                    _itemsService, listInfo.LastPriceRefresh, listInfo.PricesForItemsInList));
+            }
+            else
+            {
+                cachedListResponses.Add(cacheResponse.Value);
+            }
         }
 
         await Task.WhenAll(mapToListResponseTasks);
-        return mapToListResponseTasks.Select(task => task.Result).ToList();
+        var listResponses = mapToListResponseTasks.Select(task => task.Result).ToList();
+        foreach (var listResponse in listResponses)
+        {
+            _listResponseCacheService.UpdateCache(listResponse);
+        }
+
+        listResponses.AddRange(cachedListResponses);
+        return listResponses;
     }
 
     public async Task<ErrorOr<ListResponse>> New(string? userId, NewListModel newListModel)
@@ -58,7 +80,6 @@ public class ListCommandService
             return Error.Conflict(description: $"List with the name \"{newListModel.ListName}\" already exist");
         }
 
-        // TODO: itemlistdbmodel as parameter and check if url exists before adding?
         var list = await _unitOfWork.ItemListRepo.CreateNewList(
             userId,
             newListModel.ListName,
@@ -67,15 +88,14 @@ public class ListCommandService
             newListModel.Public
         );
 
-        var listValue = await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list);
-        var listResponse = await ItemListMapper.MapToListResponse(
-            list,
-            [listValue],
-            [],
-            _itemsService);
-
+        await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list);
         await _unitOfWork.Save();
-        return listResponse;
+        var getListResult = await GetList(userId, list.Url);
+        if (getListResult.IsError)
+        {
+            return getListResult.FirstError;
+        }
+        return getListResult.Value;
     }
 
     public async Task<ErrorOr<ListResponse>> GetList(string? userId, string listUrl)
@@ -91,12 +111,22 @@ public class ListCommandService
             return Error.Unauthorized(description: "You dont have access to this list");
         }
 
-        var listInfos = _unitOfWork.ItemListRepo.GetListInfos(list.Value.Id);
+        var cachedListResponse = _listResponseCacheService.GetListResponse(listUrl);
+        if (cachedListResponse.IsError == false)
+        {
+            return cachedListResponse.Value;
+        }
+
+        var listInfos = await _unitOfWork.ItemListRepo.GetListInfos(list.Value.Id);
         var listResponse = await ItemListMapper.MapToListResponse(
-            listInfos.list,
-            listInfos.listValues,
-            listInfos.items,
-            _itemsService);
+            listInfos.List,
+            listInfos.Snapshots,
+            listInfos.ItemActions,
+            _itemsService,
+            listInfos.LastPriceRefresh,
+            listInfos.PricesForItemsInList
+        );
+        _listResponseCacheService.UpdateCache(listResponse);
         return listResponse;
     }
 
@@ -119,6 +149,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.DeleteList(list.Value.Id);
+        _listResponseCacheService.DeleteCache(listUrl);
         await _unitOfWork.Save();
         return Result.Deleted;
     }
@@ -133,6 +164,12 @@ public class ListCommandService
         if (string.IsNullOrWhiteSpace(userId))
         {
             return Error.Unauthorized(description: "UserId not found");
+        }
+
+        var item = _itemsService.GetById(itemId);
+        if (item.IsError)
+        {
+            return item.FirstError;
         }
 
         var list = await _unitOfWork.ItemListRepo.GetByUrl(listUrl);
@@ -160,6 +197,7 @@ public class ListCommandService
         await _unitOfWork.Save();
         await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
         await _unitOfWork.Save();
+        _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
     }
 
@@ -173,6 +211,12 @@ public class ListCommandService
         if (string.IsNullOrWhiteSpace(userId))
         {
             return Error.Unauthorized(description: "UserId not found");
+        }
+
+        var item = _itemsService.GetById(itemId);
+        if (item.IsError)
+        {
+            return item.FirstError;
         }
 
         var list = await _unitOfWork.ItemListRepo.GetByUrl(listUrl);
@@ -207,7 +251,29 @@ public class ListCommandService
         await _unitOfWork.Save();
         await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
         await _unitOfWork.Save();
+        _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
+    }
+
+    public async Task<ErrorOr<Deleted>> DeleteItemAction(string? userId, long itemActionId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Error.Unauthorized(description: "UserId not found");
+        }
+
+        var action = await _unitOfWork.ItemListRepo.GetItemActionById(itemActionId);
+        
+
+        if (action.List.UserId.Equals(userId) == false)
+        {
+            return Error.Unauthorized(description: $"The list \"{action.List.Url}\" dose not belong to the user \"{userId}\"");
+        }
+
+        await _unitOfWork.ItemListRepo.DeleteItemAction(action.List, itemActionId);
+        await _unitOfWork.Save();
+        _listResponseCacheService.DeleteCache(action.List.Url);
+        return Result.Deleted;
     }
 
     public async Task<ErrorOr<Updated>> UpdateListName(string? userId, string listUrl, string newName)
@@ -229,6 +295,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.UpdateName(list.Value.Id, newName);
+        _listResponseCacheService.DeleteCache(listUrl);
         return Result.Updated;
     }
 
@@ -251,6 +318,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.UpdateDescription(list.Value.Id, newDescription);
+        _listResponseCacheService.DeleteCache(listUrl);
         return Result.Updated;
     }
 
@@ -273,6 +341,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.UpdatePublic(list.Value.Id, newPublic);
+        _listResponseCacheService.DeleteCache(listUrl);
         return Result.Updated;
     }
 }

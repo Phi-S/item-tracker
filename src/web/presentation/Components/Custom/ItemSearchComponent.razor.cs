@@ -12,11 +12,11 @@ public class ItemSearchComponentRazor : ComponentBase
     [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = null!;
 
     public ItemSearchResponse? SelectedItemSearchResponse { get; private set; }
-    protected InputText InputRef = null!;
-    protected readonly List<ItemSearchResponse> ItemSearchResponses = new();
+    protected InputText InputRef { get; set; } = null!;
+    protected List<ItemSearchResponse>? ItemSearchResponses = null;
     protected string HideSearchResponsesClass = "visually-hidden";
     protected bool LockInput;
-
+    
     private volatile bool _backgroundTaskRunning;
     private DateTime _lastInput;
 
@@ -25,7 +25,7 @@ public class ItemSearchComponentRazor : ComponentBase
         LockInput = lockInput;
         SelectedItemSearchResponse = selectedItem;
         InputRef.Value = SelectedItemSearchResponse is not null ? SelectedItemSearchResponse.Name : "";
-        ItemSearchResponses.Clear();
+        ItemSearchResponses = null;
         InvokeAsync(StateHasChanged);
     }
 
@@ -69,8 +69,7 @@ public class ItemSearchComponentRazor : ComponentBase
                         throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");
                     }
 
-                    ItemSearchResponses.Clear();
-                    ItemSearchResponses.AddRange(searchResult.Value);
+                    ItemSearchResponses = searchResult.Value;
                     ShowSearchResponses();
                     StateHasChanged();
                     break;
@@ -106,7 +105,7 @@ public class ItemSearchComponentRazor : ComponentBase
 
     protected void ShowSearchResponses()
     {
-        if (ItemSearchResponses.Any() == false)
+        if (ItemSearchResponses is null)
         {
             HideSearchResponsesClass = "visually-hidden";
             return;

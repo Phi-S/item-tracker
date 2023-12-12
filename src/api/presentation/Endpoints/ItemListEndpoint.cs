@@ -50,6 +50,23 @@ public static class ItemListEndpoint
             return Results.Text(newList.Value.Url);
         });
 
+        group.MapDelete("/delete-action", async (
+            HttpContext context,
+            ListCommandService listCommandService,
+            [FromQuery] long actionId) =>
+        {
+            var userId = context.User.Id();
+            var sellItem = await listCommandService.DeleteItemAction(userId, actionId);
+            if (sellItem.IsError)
+            {
+                return sellItem.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(sellItem.FirstError.Description)
+                    : Results.Extensions.InternalServerError(sellItem.FirstError.Description);
+            }
+
+            return Results.Ok();
+        });
+
         group.MapGet("{url}", async (
             HttpContext context,
             ListCommandService listCommandService,

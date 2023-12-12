@@ -1,0 +1,182 @@
+﻿@using BlazorBootstrap
+@using presentation.Authentication
+@using presentation.BlazorExtensions
+@using presentation.ItemTrackerApi
+@using shared.Currencies
+@using shared.Models
+@using shared.Models.ListResponse
+
+<Modal @ref="Modal" IsVerticallyCentered="true" HeaderCssClass="bg-dark h5">
+    <HeaderTemplate>
+        <span class="w-100 text-center" style="color: white">Add @_currentAction.ToString() entry</span>
+    </HeaderTemplate>
+
+    <BodyTemplate>
+        @if (_errorMessage is not null)
+        {
+            <div class="alert alert-danger">
+                @_errorMessage
+            </div>
+        }
+        <div class="input-group w-100">
+            <ItemSearchComponent @ref="ItemSearchComponentRef"/>
+        </div>
+
+        <div class="input-group w-100 text-nowrap flex-nowrap pb-2">
+            <div class="input-group-text">
+                Amount
+            </div>
+            <input class="form-control" type="number" @bind="_amountBind"/>
+        </div>
+        <div class="input-group w-100 text-nowrap flex-nowrap">
+            <div class="input-group-text">
+                Price for one
+            </div>
+            @if (List.Currency.Equals("USD"))
+            {
+                <div class="input-group-text">
+                    $
+                </div>
+            }
+            <input class="form-control" type="number" @bind="_priceBind"/>
+            @if (List.Currency.Equals("EUR"))
+            {
+                <div class="input-group-text">
+                    €
+                </div>
+            }
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="Modal.HideAsync">Close</Button>
+        <Button Color="ButtonColor.Primary" @onclick="AddItemAction">Add @_currentAction.ToString().ToLower() entry</Button>
+    </FooterTemplate>
+</Modal>
+
+@code{
+    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
+    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
+
+    private Modal Modal { get; set; } = default!;
+    private ItemSearchComponent ItemSearchComponentRef { get; set; } = default!;
+    private int? _amountBind;
+    private decimal? _priceBind;
+
+    public event EventHandler? ItemActionAdded;
+    private string? _errorMessage;
+
+    private Actions _currentAction = Actions.None;
+
+    private enum Actions
+    {
+        None,
+        Buy,
+        Sell
+    }
+
+    public async Task ShowBuy()
+    {
+        _errorMessage = null;
+        _currentAction = Actions.Buy;
+        _amountBind = null;
+        _priceBind = null;
+        await Modal.ShowAsync();
+        ItemSearchComponentRef.Reset();
+    }
+
+    public async Task ShowSell(ListItemResponse item)
+    {
+        _errorMessage = null;
+        _currentAction = Actions.Sell;
+        _amountBind = null;
+        _priceBind = null;
+        await Modal.ShowAsync();
+        ItemSearchComponentRef.Reset(
+            new ItemSearchResponse(item.ItemId, item.ItemName, item.ItemImage),
+            true
+        );
+    }
+
+    private async Task AddItemAction()
+    {
+        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            _errorMessage = "No access token found";
+            return;
+        }
+
+        var selectedItem = ItemSearchComponentRef.SelectedItemSearchResponse;
+        if (selectedItem is null)
+        {
+            _errorMessage = "No item selected";
+            return;
+        }
+
+        if (_amountBind is null or <= 0)
+        {
+            _errorMessage = "No amount entered";
+            return;
+        }
+
+        if (_priceBind is null or <= 0)
+        {
+            _errorMessage = "No price entered";
+            return;
+        }
+
+        var unitPrice = CurrencyHelper.CurrencyToSmallestUnit(List.Currency, _priceBind.Value);
+        if (_currentAction == Actions.Buy)
+        {
+            var buyItem = await ItemTrackerApiService.BuyItem(
+                accessToken,
+                List.Url,
+                selectedItem.Id,
+                _amountBind.Value,
+                unitPrice
+            );
+            if (buyItem.IsError)
+            {
+                _errorMessage = $"{buyItem.FirstError.Description}";
+                return;
+            }
+        }
+        else if (_currentAction == Actions.Sell)
+        {
+            var itemInList = List.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
+            if (itemInList is null)
+            {
+                _errorMessage = "You can't sell an item you dont have";
+                return;
+            }
+
+            if (_amountBind > itemInList.AmountInvested)
+            {
+                _errorMessage = "You can't sell more items than the list contains";
+                return;
+            }
+
+            var sellItem = await ItemTrackerApiService.SellItem(
+                accessToken,
+                List.Url,
+                selectedItem.Id,
+                _amountBind.Value,
+                unitPrice
+            );
+            if (sellItem.IsError)
+            {
+                _errorMessage = $"{sellItem.FirstError.Description}";
+                return;
+            }
+        }
+        else
+        {
+            _errorMessage = $"{_currentAction} is not valid action to add";
+        }
+
+        await Modal.HideAsync();
+        ItemActionAdded?.Invoke(this, EventArgs.Empty);
+    }
+
+}

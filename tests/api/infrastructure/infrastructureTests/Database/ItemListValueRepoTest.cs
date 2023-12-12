@@ -78,7 +78,7 @@ public class ItemListValueRepoTest
                 SteamPricesLastModified = default,
                 Buff163PricesLastModified = default,
                 CreatedUtc = default,
-                EurToUsdExchangeRate = 1
+                UsdToEurExchangeRate = 1
             });
         await dbContext.Prices.AddAsync(new ItemPriceDbModel
         {

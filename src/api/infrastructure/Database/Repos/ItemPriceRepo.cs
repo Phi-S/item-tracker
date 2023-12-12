@@ -5,14 +5,14 @@ namespace infrastructure.Database.Repos;
 public class ItemPriceRepo(XDbContext dbContext)
 {
     public async Task<ItemPriceRefreshDbModel> CreateNew(
-        double eurToUsdExchangeRate,
+        double usdToEurExchangeRate,
         DateTime steamPricesLastModified,
         DateTime buff163PricesLastModified)
     {
         var newItemPriceRefresh = await dbContext.PricesRefresh.AddAsync(
             new ItemPriceRefreshDbModel
             {
-                EurToUsdExchangeRate = eurToUsdExchangeRate,
+                UsdToEurExchangeRate = usdToEurExchangeRate,
                 SteamPricesLastModified = steamPricesLastModified,
                 Buff163PricesLastModified = buff163PricesLastModified,
                 CreatedUtc = DateTime.UtcNow
