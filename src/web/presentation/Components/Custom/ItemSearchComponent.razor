@@ -21,8 +21,8 @@
     <input
         type="text"
         class="form-control text-center"
-        @bind-Value="@SearchInputText"
-        @bind-Value:event="oninput"
+        @bind="@SearchInputText"
+        @bind:event="oninput"
         disabled="@LockInput"
         placeholder="Type to search item"
         @onfocusin="ShowSearchResponses"

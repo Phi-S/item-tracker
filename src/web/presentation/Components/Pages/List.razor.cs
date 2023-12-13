@@ -48,18 +48,24 @@ public class ListRazor : ComponentBase
         StateHasChanged();
     }
 
-    protected async Task AddBuyAction()
+    protected Task AddBuyAction()
     {
-        await AddItemActionModalRef.ShowBuy();
+        return AddItemActionModalRef.ShowBuy();
     }
 
-    protected async Task AddSellAction(ListItemResponse item)
+    protected Task AddSellAction(ListItemResponse item)
     {
-        await AddItemActionModalRef.ShowSell(item);
+        return AddItemActionModalRef.ShowSell(item);
     }
 
-    protected async Task ShowItemActions(ListItemResponse item)
+    protected Task ShowItemActions(ListItemResponse item)
     {
-        await ShowItemActionsModalRef.Show(item);
+        return ShowItemActionsModalRef.Show(item);
+    }
+
+    protected static string GetPerformanceString(long buyPrice, long? currentPrice)
+    {
+        var performance = Math.Round((double)(currentPrice ?? 0) / buyPrice * 100 - 100, 2);
+        return performance > 0 ? $"+{performance}" : $"{performance}";
     }
 }

@@ -23,7 +23,10 @@ public class ItemSearchComponentRazor : ComponentBase
         set
         {
             _searchInputText = value;
-            StartBackgroundTask();
+            if (SelectedItemSearchResponse is null)
+            {
+                StartBackgroundTask();
+            }
         }
     }
 
@@ -94,9 +97,8 @@ public class ItemSearchComponentRazor : ComponentBase
 
     protected void OnSelect(ItemSearchResponse item)
     {
-        SearchInputText = item.Name;
-        SelectedItemSearchResponse = item;
-        StateHasChanged();
+        Console.WriteLine($"On select {item}");
+        Reset(item);
     }
 
     protected async Task HideSearchResponses()

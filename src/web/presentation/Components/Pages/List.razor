@@ -62,7 +62,7 @@
                         </Tooltip>
                     </td>
                     <td class="col-1 text-nowrap">
-                        <span>@((((double)(item.SteamSellPrice ?? 0) / item.AverageBuyPrice) * 100) - 100)%</span>
+                        <span>@GetPerformanceString(item.AverageBuyPrice, item.SteamSellPrice)%</span>
                         <span>@CurrencyHelper.FormatCurrency(List.Currency, ((item.SteamSellPrice ?? 0) - item.AverageBuyPrice) * item.AmountInvested)</span>
                     </td>
                     <td class="col-1">
