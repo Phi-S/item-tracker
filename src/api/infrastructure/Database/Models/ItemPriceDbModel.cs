@@ -1,6 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Runtime.InteropServices.JavaScript;
-using Microsoft.EntityFrameworkCore;
 
 namespace infrastructure.Database.Models;
 

@@ -1,6 +1,7 @@
 using infrastructure.Database;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TestHelper.TestSetup;
 using Xunit.Abstractions;
@@ -93,6 +94,35 @@ public class ItemListRepoTest
 
         Assert.Single(listInfo.PricesForItemsInList);
         Assert.Equal(price.Entity.Id, listInfo.PricesForItemsInList.First().Id);
+    }
+
+    [Fact]
+    public async Task GetAllListsForUserTest()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var userId = "test_user_id";
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = userId,
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var itemList = await unitOfWork.ItemListRepo.GetAllListsForUser(userId);
+        Assert.Single(itemList);
+        Assert.Equal(list.Entity.Id, itemList.First().Id);
+        Assert.Equal(userId, itemList.First().UserId);
     }
 
     [Fact]
@@ -325,5 +355,261 @@ public class ItemListRepoTest
         await itemListRepo.DeleteList(listId);
         await unitOfWork.Save();
         Assert.True(dbContext.Lists.Any(list => list.Deleted == false) == false);
+    }
+
+    [Fact]
+    public async Task GetCurrentItemCountTest()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        {
+            Id = 1,
+            List = list.Entity,
+            ItemId = 1,
+            Action = "B",
+            UnitPrice = 0,
+            Amount = 1,
+            CreatedUtc = default
+        });
+
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        {
+            Id = 2,
+            List = list.Entity,
+            ItemId = 1,
+            Action = "S",
+            UnitPrice = 0,
+            Amount = 1,
+            CreatedUtc = default
+        });
+
+        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        {
+            Id = 3,
+            List = list.Entity,
+            ItemId = 1,
+            Action = "B",
+            UnitPrice = 0,
+            Amount = 5,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+
+        var itemCount = await unitOfWork.ItemListRepo.GetItemsInList(list.Entity.Id, 1);
+        Assert.Equal(5, itemCount);
+    }
+
+    [Fact]
+    public async Task AddItemAction()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        await unitOfWork.ItemListRepo.AddItemAction("B", list.Entity, 1, 1, 1);
+        await unitOfWork.Save();
+        var actionInList = await dbContext.ItemActions.FirstAsync(action => action.List.Id == list.Entity.Id);
+        Assert.Equal("B", actionInList.Action);
+        Assert.Equal(1, actionInList.ItemId);
+        Assert.Equal(1, actionInList.UnitPrice);
+        Assert.Equal(1, actionInList.Amount);
+    }
+
+    [Fact]
+    public async Task DeleteItemAction()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        var action = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        {
+            Id = 1,
+            List = list.Entity,
+            ItemId = 1,
+            Action = "B",
+            UnitPrice = 0,
+            Amount = 1,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        Assert.Equal(1, dbContext.ItemActions.Count());
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        await unitOfWork.ItemListRepo.DeleteItemAction(list.Entity, action.Entity.Id);
+        await unitOfWork.Save();
+        Assert.Equal(0, dbContext.ItemActions.Count());
+    }
+
+    [Fact]
+    public async Task UpdateNameTest()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        const string updatedName = "updated_list_name";
+        await unitOfWork.ItemListRepo.UpdateName(list.Entity.Id, updatedName);
+        await unitOfWork.Save();
+        var updatedList = await dbContext.Lists.FindAsync(list.Entity.Id);
+        Assert.NotNull(updatedList);
+        Assert.Equal(updatedName, updatedList.Name);
+    }
+    
+    [Fact]
+    public async Task UpdateDescriptionTest()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        const string updatedDescription = "updated_list_description";
+        await unitOfWork.ItemListRepo.UpdateDescription(list.Entity.Id, updatedDescription);
+        await unitOfWork.Save();
+        var updatedList = await dbContext.Lists.FindAsync(list.Entity.Id);
+        Assert.NotNull(updatedList);
+        Assert.Equal(updatedDescription, updatedList.Description);
+    }
+    
+    [Fact]
+    public async Task UpdatePublicTest()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        await unitOfWork.ItemListRepo.UpdatePublic(list.Entity.Id, true);
+        await unitOfWork.Save();
+        var updatedList = await dbContext.Lists.FindAsync(list.Entity.Id);
+        Assert.NotNull(updatedList);
+        Assert.True(updatedList.Public);
+    }
+    
+    [Fact]
+    public async Task GetItemActionByIdTest()
+    {
+        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        await using var provider = serviceCollection.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<XDbContext>();
+        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        {
+            Id = 1,
+            UserId = "user_id",
+            Name = "list_name",
+            Description = null,
+            Url = "list_url",
+            Currency = "EUR",
+            Public = false,
+            Deleted = false,
+            UpdatedUtc = default,
+            CreatedUtc = default
+        });
+        var action = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        {
+            Id = 1,
+            List = list.Entity,
+            ItemId = 1,
+            Action = "B",
+            UnitPrice = 1,
+            Amount = 1,
+            CreatedUtc = default
+        });
+        await dbContext.SaveChangesAsync();
+        
+        var unitOfWork = provider.GetRequiredService<UnitOfWork>();
+        var actionFromDb = await unitOfWork.ItemListRepo.GetItemActionById(action.Entity.Id);
+        Assert.Equal(action.Entity.Id, actionFromDb.Id);
+        Assert.Equal(action.Entity.List.Id, actionFromDb.List.Id);
+        Assert.Equal(action.Entity.ItemId, actionFromDb.ItemId);
+        Assert.Equal(action.Entity.Action, actionFromDb.Action);
+        Assert.Equal(action.Entity.UnitPrice, actionFromDb.UnitPrice);
+        Assert.Equal(action.Entity.Amount, actionFromDb.Amount);
     }
 }

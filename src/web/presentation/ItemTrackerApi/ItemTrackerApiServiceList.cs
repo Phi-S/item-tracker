@@ -45,6 +45,19 @@ public partial class ItemTrackerApiService
         return response.Value;
     }
 
+    public async Task<ErrorOr<string>> DeleteAction(string? accessToken, long actionId)
+    {
+        var url = new Uri($"{_apiEndpointUrl}/list/delete-action");
+        url = url.AddParameter("actionId", actionId.ToString());
+        var response = await DeleteWithAuthAsync(url.AbsoluteUri, accessToken);
+        if (response.IsError)
+        {
+            return response.FirstError;
+        }
+
+        return response.Value;
+    }
+
     public async Task<ErrorOr<ListResponse>> Get(string? accessToken, string listUrl)
     {
         var url = $"{_apiEndpointUrl}/list/{listUrl}";

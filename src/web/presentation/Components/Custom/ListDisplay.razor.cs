@@ -12,16 +12,17 @@ namespace presentation.Components.Custom;
 
 public class ListDisplayRazor : ComponentBase
 {
-    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
-    [Parameter] public bool DisplayGoToListButton { get; set; } = true;
     [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
     [Inject] public NavigationManager NavigationManager { get; set; } = default!;
     [Inject] public IJSRuntime JsRuntime { get; set; } = default!;
-    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
+    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
+    
+    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
+    [Parameter] public bool DisplayGoToListButton { get; set; } = true;
 
-    protected ConfirmDialog ConfirmDialog = default!;
-    protected LineChart LineChart = default!;
+    protected ConfirmDialog ConfirmDialogRef { get; set; } = default!;
+    protected LineChart LineChartRef { get; set; } = default!;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -147,7 +148,7 @@ public class ListDisplayRazor : ComponentBase
 
         await JsRuntime.InvokeVoidAsync(
             "window.blazorChart.line.initialize",
-            LineChart.ElementId!,
+            LineChartRef.ElementId!,
             "line",
             data,
             diagramData.lineChartOptionsExtension,
@@ -167,7 +168,7 @@ public class ListDisplayRazor : ComponentBase
         };
         await JsRuntime.InvokeVoidAsync(
             "window.blazorChart.line.update",
-            LineChart.ElementId!,
+            LineChartRef.ElementId!,
             "line",
             data,
             diagramData.lineChartOptionsExtension
@@ -177,7 +178,7 @@ public class ListDisplayRazor : ComponentBase
 
     protected async Task MakeListPublic()
     {
-        var confirmation = await ConfirmDialog.ShowAsync(
+        var confirmation = await ConfirmDialogRef.ShowAsync(
             "Are you sure you want to make the list public",
             "Public lists can be seen by everyone"
         );
@@ -187,12 +188,11 @@ public class ListDisplayRazor : ComponentBase
             var makeListPublic = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, true);
             if (makeListPublic.IsError)
             {
-                ToastService.Notify(new ToastMessage(ToastType.Danger,
-                    $"Failed to set list to public. {makeListPublic.FirstError.Description}"));
+                ToastService.Error($"Failed to set list to public. {makeListPublic.FirstError.Description}");
             }
             else
             {
-                ToastService.Notify(new ToastMessage(ToastType.Dark, $"List \"{List.Name}\" is now public"));
+                ToastService.Info($"List \"{List.Name}\" is now public");
                 List = List with { Public = true };
                 StateHasChanged();
             }
@@ -201,7 +201,7 @@ public class ListDisplayRazor : ComponentBase
 
     protected async Task MakeListPrivate()
     {
-        var confirmation = await ConfirmDialog.ShowAsync(
+        var confirmation = await ConfirmDialogRef.Show(
             $"Are you sure you want to make the list \"{List.Name}\" private",
             "Private lists can only be seen by yourself"
         );
@@ -211,12 +211,12 @@ public class ListDisplayRazor : ComponentBase
             var makeListPrivate = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, false);
             if (makeListPrivate.IsError)
             {
-                ToastService.Notify(new ToastMessage(ToastType.Danger,
-                    $"Failed to set list \"{List.Name}\" to private. {makeListPrivate.FirstError.Description}"));
+                ToastService.Error(
+                    $"Failed to set list \"{List.Name}\" to private. {makeListPrivate.FirstError.Description}");
             }
             else
             {
-                ToastService.Notify(new ToastMessage(ToastType.Dark, $"List \"{List.Name}\" is now private"));
+                ToastService.Info($"List \"{List.Name}\" is now private");
                 List = List with { Public = false };
                 StateHasChanged();
             }
@@ -225,7 +225,7 @@ public class ListDisplayRazor : ComponentBase
 
     protected async Task DeleteList()
     {
-        var confirmation = await ConfirmDialog.ShowAsync(
+        var confirmation = await ConfirmDialogRef.Show(
             "Are you sure you want to delete this list",
             $"List name: {List.Name}"
         );
@@ -235,12 +235,11 @@ public class ListDisplayRazor : ComponentBase
             var deleteList = await ItemTrackerApiService.Delete(accessToken, List.Url);
             if (deleteList.IsError)
             {
-                ToastService.Notify(new ToastMessage(ToastType.Danger,
-                    $"Failed to delete list \"{List.Name}\". {deleteList.FirstError.Description}"));
+                ToastService.Error($"Failed to delete list \"{List.Name}\". {deleteList.FirstError.Description}");
             }
             else
             {
-                ToastService.Notify(new ToastMessage(ToastType.Dark, $"List \"{List.Name}\" deleted"));
+                ToastService.Info($"List \"{List.Name}\" deleted");
                 NavigationManager.NavigateToLists();
             }
         }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 using presentation.Authentication;
 using presentation.ItemTrackerApi;
 using shared.Models;
@@ -8,15 +7,26 @@ namespace presentation.Components.Custom;
 
 public class ItemSearchComponentRazor : ComponentBase
 {
-    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
-    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = null!;
+    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
 
     public ItemSearchResponse? SelectedItemSearchResponse { get; private set; }
-    protected InputText InputRef { get; set; } = null!;
-    protected List<ItemSearchResponse>? ItemSearchResponses = null;
+    protected List<ItemSearchResponse>? ItemSearchResponses;
     protected string HideSearchResponsesClass = "visually-hidden";
     protected bool LockInput;
-    
+
+    private string _searchInputText = "";
+
+    protected string SearchInputText
+    {
+        get => _searchInputText;
+        set
+        {
+            _searchInputText = value;
+            StartBackgroundTask();
+        }
+    }
+
     private volatile bool _backgroundTaskRunning;
     private DateTime _lastInput;
 
@@ -24,9 +34,9 @@ public class ItemSearchComponentRazor : ComponentBase
     {
         LockInput = lockInput;
         SelectedItemSearchResponse = selectedItem;
-        InputRef.Value = SelectedItemSearchResponse is not null ? SelectedItemSearchResponse.Name : "";
+        SearchInputText = SelectedItemSearchResponse is not null ? SelectedItemSearchResponse.Name : "";
         ItemSearchResponses = null;
-        InvokeAsync(StateHasChanged);
+        StateHasChanged();
     }
 
     private void StartBackgroundTask()
@@ -46,12 +56,12 @@ public class ItemSearchComponentRazor : ComponentBase
                 {
                     await Task.Delay(50);
                     var timeSinceLastInput = DateTime.Now - _lastInput;
-                    if (timeSinceLastInput.TotalMilliseconds <= 1000)
+                    if (timeSinceLastInput.TotalMilliseconds <= 600)
                     {
                         continue;
                     }
 
-                    var searchString = InputRef.Value;
+                    var searchString = SearchInputText;
                     if (string.IsNullOrWhiteSpace(searchString) || searchString.Length < 3)
                     {
                         break;
@@ -82,16 +92,9 @@ public class ItemSearchComponentRazor : ComponentBase
         });
     }
 
-    protected void OnInput(ChangeEventArgs obj)
-    {
-        var searchText = obj.Value?.ToString()?.Trim();
-        InputRef.Value = searchText;
-        StartBackgroundTask();
-    }
-
     protected void OnSelect(ItemSearchResponse item)
     {
-        InputRef.Value = item.Name;
+        SearchInputText = item.Name;
         SelectedItemSearchResponse = item;
         StateHasChanged();
     }
@@ -105,7 +108,7 @@ public class ItemSearchComponentRazor : ComponentBase
 
     protected void ShowSearchResponses()
     {
-        if (ItemSearchResponses is null)
+        if (ItemSearchResponses is null || LockInput)
         {
             HideSearchResponsesClass = "visually-hidden";
             return;

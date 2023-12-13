@@ -1,4 +1,5 @@
 ﻿@using BlazorBootstrap
+@using Microsoft.AspNetCore.Authorization
 @using presentation.Authentication
 @using presentation.BlazorExtensions
 @using presentation.ItemTrackerApi
@@ -6,11 +7,12 @@
 @using shared.Models
 @using shared.Models.ListResponse
 
-<Modal @ref="Modal" IsVerticallyCentered="true" HeaderCssClass="bg-dark h5">
+@attribute [Authorize]
+
+<Modal @ref="ModalRef" IsVerticallyCentered="true" HeaderCssClass="bg-dark h5">
     <HeaderTemplate>
         <span class="w-100 text-center" style="color: white">Add @_currentAction.ToString() entry</span>
     </HeaderTemplate>
-
     <BodyTemplate>
         @if (_errorMessage is not null)
         {
@@ -48,17 +50,18 @@
         </div>
     </BodyTemplate>
     <FooterTemplate>
-        <Button Color="ButtonColor.Secondary" @onclick="Modal.HideAsync">Close</Button>
+        <Button Color="ButtonColor.Secondary" @onclick="ModalRef.HideAsync">Close</Button>
         <Button Color="ButtonColor.Primary" @onclick="AddItemAction">Add @_currentAction.ToString().ToLower() entry</Button>
     </FooterTemplate>
 </Modal>
 
 @code{
     [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
     [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
 
-    private Modal Modal { get; set; } = default!;
+    private Modal ModalRef { get; set; } = default!;
     private ItemSearchComponent ItemSearchComponentRef { get; set; } = default!;
     private int? _amountBind;
     private decimal? _priceBind;
@@ -81,7 +84,7 @@
         _currentAction = Actions.Buy;
         _amountBind = null;
         _priceBind = null;
-        await Modal.ShowAsync();
+        await ModalRef.ShowAsync();
         ItemSearchComponentRef.Reset();
     }
 
@@ -91,7 +94,7 @@
         _currentAction = Actions.Sell;
         _amountBind = null;
         _priceBind = null;
-        await Modal.ShowAsync();
+        await ModalRef.ShowAsync();
         ItemSearchComponentRef.Reset(
             new ItemSearchResponse(item.ItemId, item.ItemName, item.ItemImage),
             true
@@ -141,6 +144,8 @@
                 _errorMessage = $"{buyItem.FirstError.Description}";
                 return;
             }
+
+            ToastService.Info($"Added buy entry for item \"{selectedItem.Name}\" Amount: {_amountBind.Value} Price for one: {unitPrice}");
         }
         else if (_currentAction == Actions.Sell)
         {
@@ -169,13 +174,15 @@
                 _errorMessage = $"{sellItem.FirstError.Description}";
                 return;
             }
+
+            ToastService.Info($"Added sell entry for item \"{selectedItem.Name}\" Amount: {_amountBind.Value} Price for one: {unitPrice}");
         }
         else
         {
             _errorMessage = $"{_currentAction} is not valid action to add";
         }
 
-        await Modal.HideAsync();
+        await ModalRef.HideAsync();
         ItemActionAdded?.Invoke(this, EventArgs.Empty);
     }
 

@@ -1,6 +1,4 @@
-using Microsoft.Extensions.Configuration;
 using TestHelper.DockerContainerFolder;
-using TestHelper.TestConfigurationFolder;
 using Xunit.Abstractions;
 
 namespace TestHelperTests;

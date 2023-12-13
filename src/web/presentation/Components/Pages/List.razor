@@ -1,14 +1,11 @@
 ﻿@page "/list/{ListUrl}"
-@using presentation.Authentication
 @using shared.Currencies
-@using Modal = presentation.Components.Custom.ModalCustom
-@using BlazorBootstrap
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
     @if (List is null)
     {
-        <h1>loading...</h1>
+        <Loading/>
     }
     else
     {
@@ -24,11 +21,9 @@
                 <th scope="col"></th>
                 <th scope="col">Item</th>
                 <th scope="col">Amount</th>
-                <th scope="col">Avg buy price</th>
-                <th scope="col">Total buy price</th>
-                <th scope="col">Current sell price</th>
-                <th scope="col">Total sell price</th>
-                <th scope="col">Profit</th>
+                <th scope="col">Buy price</th>
+                <th scope="col">Steam price</th>
+                <th scope="col">Performance</th>
                 <th scope="col"></th>
                 <th scope="col">
                     <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">Add Buy entry</button>
@@ -49,18 +44,25 @@
                         <span>@item.AmountInvested</span>
                     </td>
                     <td class="col-1">
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AverageBuyPrice)</span>
+                        <Tooltip Title="Price for one item">
+                            @CurrencyHelper.FormatCurrency(List.Currency, item.AverageBuyPrice) /1
+                        </Tooltip>
+                        <br/>
+                        <Tooltip Title="Total price">
+                            <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AmountInvested * item.AverageBuyPrice)</span>
+                        </Tooltip>
                     </td>
                     <td class="col-1">
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.AmountInvested * item.AverageBuyPrice)</span>
+                        <Tooltip Title="Price for one item">
+                            <span>@CurrencyHelper.FormatCurrency(List.Currency, item.SteamSellPrice ?? 0) /1</span>
+                        </Tooltip>
+                        <br/>
+                        <Tooltip Title="Total price">
+                            <span>@CurrencyHelper.FormatCurrency(List.Currency, (item.SteamSellPrice ?? 0) * item.AmountInvested)</span>
+                        </Tooltip>
                     </td>
-                    <td class="col-1">
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.SteamSellPrice ?? 0)</span>
-                    </td>
-                    <td class="col-1">
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, (item.SteamSellPrice ?? 0) * item.AmountInvested)</span>
-                    </td>
-                    <td class="col-1">
+                    <td class="col-1 text-nowrap">
+                        <span>@((((double)(item.SteamSellPrice ?? 0) / item.AverageBuyPrice) * 100) - 100)%</span>
                         <span>@CurrencyHelper.FormatCurrency(List.Currency, ((item.SteamSellPrice ?? 0) - item.AverageBuyPrice) * item.AmountInvested)</span>
                     </td>
                     <td class="col-1">

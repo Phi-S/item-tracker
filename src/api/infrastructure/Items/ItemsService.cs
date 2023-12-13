@@ -40,20 +40,50 @@ public class ItemsService
         return item;
     }
 
-    public ErrorOr<ItemModel> GetByName(string itemName)
-    {
-        var item = _itemList.FirstOrDefault(model => model.Name.Equals(itemName));
-        if (item is null)
-        {
-            return Error.NotFound(description: $"Failed to find item with the name {itemName}");
-        }
-
-        return item;
-    }
-
     public ErrorOr<List<ItemModel>> Search(string searchString)
     {
-        return _itemList.Where(model => model.Name.Contains(searchString, StringComparison.CurrentCultureIgnoreCase))
-            .Take(10).ToList();
+        var searchStringWords = searchString.ToLower().Split();
+        var searchForPriorityMatches = searchStringWords.Length >= 2;
+
+        var matches = new Dictionary<ItemModel, int>();
+        foreach (var item in _itemList)
+        {
+            var name = item.Name.ToLower();
+            if (name.Equals(searchString))
+            {
+                return new List<ItemModel> { item };
+            }
+
+            if (searchForPriorityMatches && name.Contains(searchString))
+            {
+                matches.Add(item, int.MaxValue);
+                continue;
+            }
+
+            var itemNameWords = name.Split();
+            var intersect = searchStringWords.Intersect(itemNameWords).ToList();
+            if (intersect.Count > 0)
+            {
+                matches.Add(item, intersect.Count);
+                continue;
+            }
+
+            foreach (var searchStringWord in searchStringWords)
+            {
+                if (name.Contains(searchStringWord))
+                {
+                    matches.Add(item,int.MinValue);
+                    break;
+                }
+            }
+        }
+
+        const int maxSearchResultCount = 15;
+        var result = matches
+            .OrderByDescending(match => match.Value)
+            .Select(match => match.Key)
+            .Take(maxSearchResultCount);
+
+        return result.ToList();
     }
 }

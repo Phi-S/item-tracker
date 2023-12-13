@@ -240,7 +240,7 @@ public class ListCommandService
             return Error.Failure(description: "Cant sell more then 5000 items at once");
         }
 
-        var currentItemCount = await _unitOfWork.ItemListRepo.GetCurrentItemCount(list.Value, itemId);
+        var currentItemCount = await _unitOfWork.ItemListRepo.GetItemsInList(list.Value.Id, itemId);
         if (amount > currentItemCount)
         {
             return Error.Conflict(description:
@@ -264,7 +264,6 @@ public class ListCommandService
 
         var action = await _unitOfWork.ItemListRepo.GetItemActionById(itemActionId);
         
-
         if (action.List.UserId.Equals(userId) == false)
         {
             return Error.Unauthorized(description: $"The list \"{action.List.Url}\" dose not belong to the user \"{userId}\"");
@@ -295,6 +294,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.UpdateName(list.Value.Id, newName);
+        await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Updated;
     }
@@ -318,6 +318,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.UpdateDescription(list.Value.Id, newDescription);
+        await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Updated;
     }
@@ -341,6 +342,7 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.UpdatePublic(list.Value.Id, newPublic);
+        await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Updated;
     }

@@ -2,7 +2,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using ErrorOr;
-using shared;
 using shared.Models;
 using Throw;
 

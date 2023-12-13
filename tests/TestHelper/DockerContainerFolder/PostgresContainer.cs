@@ -83,7 +83,7 @@ public static class PostgresContainer
         while (true)
         {
             await Task.Delay(10);
-            if (sw.ElapsedMilliseconds >= 3000)
+            if (sw.ElapsedMilliseconds >= 10000)
             {
                 await cancellationTokenSource.CancelAsync();
                 throw new Exception("Postgres container failed to start");
@@ -96,7 +96,8 @@ public static class PostgresContainer
             }
         }
 
-        await Task.Delay(1000);
+        var randomTimeout = Random.Shared.Next(3000, 5000);
+        await Task.Delay(randomTimeout);
         outputHelper.WriteLine($"Postgres container name: {name}");
         outputHelper.WriteLine($"Postgres container port: {port}");
         outputHelper.WriteLine($"Postgres container database name: {DatabaseName}");

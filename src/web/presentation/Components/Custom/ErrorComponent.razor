@@ -13,7 +13,7 @@ else
 {
     [Parameter]
     [EditorRequired]
-    public RenderFragment ChildContent { get; set; } = null!;
+    public RenderFragment ChildContent { get; set; } = default!;
 
     private bool IsError { get; set; }
     private string ErrorMessage { get; set; } = "An Error has occured";

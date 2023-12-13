@@ -1,6 +1,4 @@
-﻿using shared;
-
-namespace presentation.Extension;
+﻿namespace presentation.Extension;
 
 internal static class ResultsExtensions
 {

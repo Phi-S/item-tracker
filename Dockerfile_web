@@ -1,8 +1,8 @@
 ﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY src/. .
 RUN dotnet workload install wasm-tools
-RUN apt-get update && apt-get install -y python3 && apt-get install libatomic1
+RUN apt-get update && apt-get install -y python3 libatomic1
+COPY src/. .
 RUN dotnet publish "web/presentation/presentation.csproj" \
     -c Release \
     -o /app

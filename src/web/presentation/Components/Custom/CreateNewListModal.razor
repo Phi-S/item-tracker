@@ -1,0 +1,76 @@
+﻿@using BlazorBootstrap
+@using Microsoft.AspNetCore.Authorization
+@using presentation.Authentication
+@using presentation.BlazorExtensions
+@using presentation.ItemTrackerApi
+@using shared.Currencies
+@using shared.Models
+@using shared.Models.ListResponse
+
+@attribute [Authorize]
+
+<Modal @ref="ModalRef" IsVerticallyCentered="true" HeaderCssClass="bg-dark h5">
+    <HeaderTemplate>
+        <span class="w-100 text-center" style="color: white">Create new list</span>
+    </HeaderTemplate>
+    <BodyTemplate>
+        <div class="mb-2">
+            <input @bind="_newListModel.ListName" class="form-control" type="text" placeholder="List name">
+        </div>
+        <div class="mb-2">
+            <input @bind="_newListModel.ListDescription" class="form-control" type="text" placeholder="List Description">
+        </div>
+        <div class="form-floating mb-2">
+            <select @bind="_newListModel.Currency" id="currencySelect" class="form-select">
+                <option selected value="EUR">€</option>
+                <option value="USD">$</option>
+            </select>
+            <label for="currencySelect">Currency</label>
+        </div>
+        <div class="mb-3">
+            <input @bind="_newListModel.Public" class="form-check-input" type="checkbox" id="publicCheckbox">
+            <label class="form-check-label" for="publicCheckbox">If checked the new list will be visible to everyone</label>
+        </div>
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button Color="ButtonColor.Secondary" @onclick="ModalRef.HideAsync">Close</Button>
+        <Button Color="ButtonColor.Primary" @onclick="CreateNewList">Create</Button>
+    </FooterTemplate>
+</Modal>
+
+@code{
+    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] public NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] protected ToastService ToastService { get; set; } = default!;
+    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
+
+    private Modal ModalRef { get; set; } = default!;
+    private NewListModel _newListModel = new() { Currency = "EUR" };
+
+    public Task Show()
+    {
+        return ModalRef.ShowAsync();
+    }
+
+    private async Task CreateNewList()
+    {
+        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new Exception("Access token is not set. This should never happen");
+        }
+
+        var newList = await ItemTrackerApiService.New(accessToken, _newListModel);
+        if (newList.IsError == false)
+        {
+            ToastService.Info($"New list \"{_newListModel.ListName}\" created");
+            _newListModel = new NewListModel();
+            NavigationManager.NavigateToList(newList.Value);
+        }
+        else
+        {
+            ToastService.Error($"Failed to create new list. {newList.FirstError.Description}");
+        }
+    }
+
+}

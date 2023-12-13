@@ -5,7 +5,7 @@
 @using shared.Currencies
 @inherits ListDisplayRazor
 
-<ConfirmDialog @ref="ConfirmDialog"/>
+<ConfirmDialog @ref="ConfirmDialogRef"/>
 
 <div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
     <button class="col-3 h-100 container btn border-end rounded-0" @onclick="() => NavigationManager.NavigateToList(List.Url)">
@@ -45,7 +45,7 @@
                 </li>
             </ul>
         </div>
-        <LineChart @ref="LineChart" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
+        <LineChart @ref="LineChartRef" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
     </div>
 
     @if (DisplayGoToListButton)

@@ -7,12 +7,6 @@ namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
-    public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
-    {
-        return Task.FromResult(dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
-            .ToList());
-    }
-
     public async
         Task<(
             ItemListDbModel List,
@@ -33,6 +27,12 @@ public class ItemListRepo(XDbContext dbContext)
             price.ItemPriceRefresh.Id == lastPriceRefresh.Id && itemsInListIds.Contains(price.ItemId)).ToList();
 
         return (list, snapshots, itemAction, lastPriceRefresh, pricesForItemsInList);
+    }
+    
+    public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
+    {
+        return Task.FromResult(dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
+            .ToList());
     }
 
     public async Task<bool> ExistsWithNameForUser(string userId, string listName)
@@ -88,10 +88,10 @@ public class ItemListRepo(XDbContext dbContext)
         listToRemove.Deleted = true;
     }
 
-    public async Task<int> GetCurrentItemCount(ItemListDbModel list, long itemId)
+    public async Task<int> GetItemsInList(long listId, long itemId)
     {
         var actionsForItemId = dbContext.ItemActions
-            .Where(action => action.List.Id == list.Id && action.ItemId == itemId).OrderBy(action => action.CreatedUtc);
+            .Where(action => action.List.Id == listId && action.ItemId == itemId).OrderBy(action => action.CreatedUtc);
         var itemCount = 0;
         foreach (var action in actionsForItemId)
         {
@@ -147,29 +147,23 @@ public class ItemListRepo(XDbContext dbContext)
 
     public async Task UpdateName(long listId, string newListName)
     {
-        await dbContext.Lists
-            .Where(l => l.Id == listId)
-            .ExecuteUpdateAsync(b =>
-                b.SetProperty(l => l.Name, newListName)
-            );
+        var list = await dbContext.Lists.FindAsync(listId);
+        list.ThrowIfNull();
+        list.Name = newListName;
     }
 
     public async Task UpdateDescription(long listId, string newDescription)
     {
-        await dbContext.Lists
-            .Where(l => l.Id == listId)
-            .ExecuteUpdateAsync(b =>
-                b.SetProperty(l => l.Description, newDescription)
-            );
+        var list = await dbContext.Lists.FindAsync(listId);
+        list.ThrowIfNull();
+        list.Description = newDescription;
     }
 
     public async Task UpdatePublic(long listId, bool newPublic)
     {
-        await dbContext.Lists
-            .Where(l => l.Id == listId)
-            .ExecuteUpdateAsync(b =>
-                b.SetProperty(l => l.Public, newPublic)
-            );
+        var list = await dbContext.Lists.FindAsync(listId);
+        list.ThrowIfNull();
+        list.Public = newPublic;
     }
 
     public async Task<ItemListItemActionDbModel> GetItemActionById(long actionId)

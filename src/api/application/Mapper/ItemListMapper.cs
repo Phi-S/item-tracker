@@ -3,7 +3,6 @@ using infrastructure.ExchangeRates;
 using infrastructure.Items;
 using shared.Currencies;
 using shared.Models.ListResponse;
-using Throw;
 
 namespace application.Mapper;
 
