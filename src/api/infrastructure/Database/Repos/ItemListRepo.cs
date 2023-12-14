@@ -7,6 +7,11 @@ namespace infrastructure.Database.Repos;
 
 public class ItemListRepo(XDbContext dbContext)
 {
+    public IQueryable<ItemListDbModel> GetAllLists()
+    {
+        return dbContext.Lists.Where(list => list.Deleted == false);
+    }
+    
     public async
         Task<(
             ItemListDbModel List,
@@ -54,18 +59,12 @@ public class ItemListRepo(XDbContext dbContext)
 
     public async Task<ItemListDbModel> CreateNewList(
         string userId,
+        string url,
         string listName,
         string? listDescription,
         string currency,
         bool makeListPublic)
     {
-        var url = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        // Replace URL unfriendly characters
-        url = url
-            .Replace("=", "")
-            .Replace("/", "_")
-            .Replace("+", "-");
-
         var currentDateTimeUtc = DateTime.UtcNow;
         var itemList = await dbContext.Lists.AddAsync(new ItemListDbModel
         {

@@ -61,7 +61,7 @@ public class ListCommandService
         return listResponses;
     }
 
-    public async Task<ErrorOr<ListResponse>> New(string? userId, NewListModel newListModel)
+    public async Task<ErrorOr<string>> New(string? userId, NewListModel newListModel)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -80,22 +80,30 @@ public class ListCommandService
             return Error.Conflict(description: $"List with the name \"{newListModel.ListName}\" already exist");
         }
 
+        var url = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        // Replace URL unfriendly characters
+        url = url
+            .Replace("=", "")
+            .Replace("/", "_")
+            .Replace("+", "-");
+
         var list = await _unitOfWork.ItemListRepo.CreateNewList(
             userId,
+            url,
             newListModel.ListName,
             newListModel.ListDescription,
             newListModel.Currency,
             newListModel.Public
         );
 
-        await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list);
-        await _unitOfWork.Save();
-        var getListResult = await GetList(userId, list.Url);
-        if (getListResult.IsError)
+        var snapshot = await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list);
+        if (snapshot.IsError)
         {
-            return getListResult.FirstError;
+            return snapshot.FirstError;
         }
-        return getListResult.Value;
+
+        await _unitOfWork.Save();
+        return url;
     }
 
     public async Task<ErrorOr<ListResponse>> GetList(string? userId, string listUrl)
@@ -195,7 +203,12 @@ public class ListCommandService
 
         await _unitOfWork.ItemListRepo.AddItemAction("B", list.Value, itemId, unitPrice, amount);
         await _unitOfWork.Save();
-        await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
+        var snapshot = await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
+        if (snapshot.IsError)
+        {
+            return snapshot.FirstError;
+        }
+
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
@@ -249,7 +262,12 @@ public class ListCommandService
 
         await _unitOfWork.ItemListRepo.AddItemAction("S", list.Value, itemId, unitPrice, amount);
         await _unitOfWork.Save();
-        await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
+        var snapshot = await _unitOfWork.ItemListSnapshotRepo.CalculateWithLatestPrices(list.Value);
+        if (snapshot.IsError)
+        {
+            return snapshot.FirstError;
+        }
+
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
@@ -263,10 +281,11 @@ public class ListCommandService
         }
 
         var action = await _unitOfWork.ItemListRepo.GetItemActionById(itemActionId);
-        
+
         if (action.List.UserId.Equals(userId) == false)
         {
-            return Error.Unauthorized(description: $"The list \"{action.List.Url}\" dose not belong to the user \"{userId}\"");
+            return Error.Unauthorized(
+                description: $"The list \"{action.List.Url}\" dose not belong to the user \"{userId}\"");
         }
 
         await _unitOfWork.ItemListRepo.DeleteItemAction(action.List, itemActionId);

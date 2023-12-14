@@ -26,25 +26,28 @@
     </button>
 
     <div class="@(DisplayGoToListButton ? "col-8" : "col-9") h-100 p-0">
-        <div class="position-relative d-flex z-3 justify-content-end dropstart">
-            <button class="btn-dropdown bi bi-gear position-absolute pt-2" data-bs-toggle="dropdown" aria-expanded="false">
-            </button>
-            <ul class="dropdown-menu text-center">
-                <li class="border-bottom">
-                    @if (List.Public)
-                    {
-                        <button class="btn-dropdown w-100" @onclick="MakeListPrivate">Make list private</button>
-                    }
-                    else
-                    {
-                        <button class="btn-dropdown w-100" @onclick="MakeListPublic">Make list public</button>
-                    }
-                </li>
-                <li>
-                    <button class="btn-dropdown w-100" style="color: red" @onclick="DeleteList">Delete list</button>
-                </li>
-            </ul>
-        </div>
+        @if (IsOwnList)
+        {
+            <div class="position-relative d-flex z-3 justify-content-end dropstart">
+                <button class="btn-dropdown bi bi-gear position-absolute" data-bs-toggle="dropdown" aria-expanded="false">
+                </button>
+                <ul class="dropdown-menu text-center">
+                    <li class="border-bottom">
+                        @if (List.Public)
+                        {
+                            <button class="btn-dropdown w-100" @onclick="MakeListPrivate">Make list private</button>
+                        }
+                        else
+                        {
+                            <button class="btn-dropdown w-100" @onclick="MakeListPublic">Make list public</button>
+                        }
+                    </li>
+                    <li>
+                        <button class="btn-dropdown w-100" style="color: red" @onclick="DeleteList">Delete list</button>
+                    </li>
+                </ul>
+            </div>
+        }
         <LineChart @ref="LineChartRef" HeightUnit="Unit.Percentage" Height="100" WidthUnit="Unit.Percentage" Width="100"/>
     </div>
 

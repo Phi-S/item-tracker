@@ -1,4 +1,6 @@
-﻿using infrastructure.Database.Models;
+﻿using ErrorOr;
+using infrastructure.Database.Models;
+using infrastructure.ExchangeRates;
 using Microsoft.EntityFrameworkCore;
 using shared.Currencies;
 
@@ -13,7 +15,7 @@ public class ItemListSnapshotRepo
         _dbContext = dbContext;
     }
 
-    public async Task CalculateLatestForAll(ItemPriceRefreshDbModel itemPriceRefreshDbModel)
+    public async Task CalculateForAll(ItemPriceRefreshDbModel itemPriceRefreshDbModel)
     {
         var lists = _dbContext.Lists.Where(list => list.Deleted == false).ToList();
         foreach (var list in lists)
@@ -22,10 +24,15 @@ public class ItemListSnapshotRepo
         }
     }
 
-    public async Task<ItemListSnapshotDbModel> CalculateWithLatestPrices(ItemListDbModel list)
+    public async Task<ErrorOr<ItemListSnapshotDbModel>> CalculateWithLatestPrices(ItemListDbModel list)
     {
-        var latestItemPriceRefresh =
-            _dbContext.PricesRefresh.OrderByDescending(refresh => refresh.CreatedUtc).First();
+        var latestItemPriceRefresh = await
+            _dbContext.PricesRefresh.OrderByDescending(refresh => refresh.CreatedUtc).FirstOrDefaultAsync();
+        if (latestItemPriceRefresh is null)
+        {
+            return Error.NotFound(description: "No price refresh found");
+        }
+
         return await Calculate(list, latestItemPriceRefresh);
     }
 
@@ -116,6 +123,99 @@ public class ItemListSnapshotRepo
             {
                 buffValue ??= 0;
                 buffValue += forItem.TotalBuff163Price.Value;
+            }
+        }
+
+        var listValue = new ItemListSnapshotDbModel
+        {
+            List = list,
+            SteamValue = steamValue,
+            BuffValue = buffValue,
+            ItemPriceRefresh = itemPriceRefreshDbModel,
+            CreatedUtc = DateTime.UtcNow
+        };
+        var newItemListValue = await _dbContext.ListSnapshots.AddAsync(listValue);
+        return newItemListValue.Entity;
+    }
+
+    public async Task<ErrorOr<ItemListSnapshotDbModel>> CalculateNew(
+        ItemListDbModel list,
+        ItemPriceRefreshDbModel itemPriceRefreshDbModel,
+        List<ItemPriceDbModel> prices)
+    {
+        var items = _dbContext.ItemActions
+            .Where(item => item.List.Id == list.Id)
+            .GroupBy(item => item.ItemId)
+            .Select(group => new
+            {
+                ItemId = group.Key,
+                ItemCount =
+                    group.Where(itemAction => itemAction.Action.Equals("B")).Sum(itemAction => itemAction.Amount) -
+                    group.Where(itemAction => itemAction.Action.Equals("S")).Sum(itemAction => itemAction.Amount)
+            })
+            .Where(select => select.ItemCount > 0)
+            .ToList();
+
+        long? steamValue = null;
+        long? buffValue = null;
+        foreach (var item in items)
+        {
+            if (item.ItemCount == 0)
+            {
+                continue;
+            }
+
+            var priceForItem = prices.FirstOrDefault(price => price.ItemId == item.ItemId);
+            if (priceForItem is null)
+            {
+                continue;
+            }
+
+            var steamPrice = priceForItem.SteamPriceCentsUsd;
+            var buffPrice = priceForItem.Buff163PriceCentsUsd;
+            if (steamPrice is null && buffPrice is null)
+            {
+                continue;
+            }
+            
+            
+
+            long? totalSteamPrice;
+            long? totalBuff163Price;
+            if (list.Currency.Equals(CurrenciesConstants.EURO))
+            {
+                var eurToUsdExchangeRate = itemPriceRefreshDbModel.UsdToEurExchangeRate;
+                totalSteamPrice = priceForItem.SteamPriceCentsUsd is null
+                    ? null
+                    : ExchangeRateHelper.ApplyExchangeRate(priceForItem.SteamPriceCentsUsd.Value,
+                        eurToUsdExchangeRate) * item.ItemCount;
+
+                totalBuff163Price = priceForItem.Buff163PriceCentsUsd is null
+                    ? null
+                    : ExchangeRateHelper.ApplyExchangeRate(priceForItem.Buff163PriceCentsUsd.Value,
+                          eurToUsdExchangeRate) *
+                      item.ItemCount;
+            }
+            else if (list.Currency.Equals(CurrenciesConstants.USD))
+            {
+                totalSteamPrice = priceForItem.SteamPriceCentsUsd * item.ItemCount;
+                totalBuff163Price = priceForItem.Buff163PriceCentsUsd * item.ItemCount;
+            }
+            else
+            {
+                return Error.Failure(description: $"Currency \"{list.Currency}\" is not implemented");
+            }
+
+            if (totalSteamPrice is not null)
+            {
+                steamValue ??= 0;
+                steamValue += totalSteamPrice.Value;
+            }
+
+            if (totalBuff163Price is not null)
+            {
+                buffValue ??= 0;
+                buffValue += totalBuff163Price.Value;
             }
         }
 

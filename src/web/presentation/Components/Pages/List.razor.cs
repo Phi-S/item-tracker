@@ -23,15 +23,29 @@ public class ListRazor : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
-        await GetList();
-        AddItemActionModalRef.ItemActionAdded += async (_, _) =>
+        try
         {
             await GetList();
-            if (List is not null)
+            AddItemActionModalRef.ItemActionAdded += async (_, _) =>
             {
-                await ListDisplayRef.UpdateDiagram(List);
-            }
-        };
+                try
+                {
+                    await GetList();
+                    if (List is not null)
+                    {
+                        await ListDisplayRef.UpdateDiagram(List);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
     }
 
     private async Task GetList()

@@ -99,11 +99,12 @@ public class ItemListValueRepoTest
         var itemListValueRepo = unitOfWork.ItemListSnapshotRepo;
         var sw = Stopwatch.StartNew();
         var newItemListValue = await itemListValueRepo.CalculateWithLatestPrices(list.Entity);
+        Assert.False(newItemListValue.IsError);
         await unitOfWork.Save();
         _outputHelper.WriteLine($"itemListValueRepo.CalculateLatest duration: {sw.ElapsedMilliseconds} ms");
-        Assert.True(newItemListValue.SteamValue.HasValue);
-        Assert.True(newItemListValue.SteamValue.Value == 4);
-        Assert.True(newItemListValue.BuffValue.HasValue);
-        Assert.True(newItemListValue.BuffValue.Value == 8);
+        Assert.True(newItemListValue.Value.SteamValue.HasValue);
+        Assert.True(newItemListValue.Value.SteamValue.Value == 4);
+        Assert.True(newItemListValue.Value.BuffValue.HasValue);
+        Assert.True(newItemListValue.Value.BuffValue.Value == 8);
     }
 }

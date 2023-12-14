@@ -24,11 +24,15 @@ public class ListDisplayRazor : ComponentBase
     protected ConfirmDialog ConfirmDialogRef { get; set; } = default!;
     protected LineChart LineChartRef { get; set; } = default!;
 
+    protected bool IsOwnList = false;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await RenderDiagram(List);
+            var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            IsOwnList = List.UserId.Equals(authenticationState.User.Claims.UserId());
             await base.OnAfterRenderAsync(firstRender);
         }
     }

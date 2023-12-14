@@ -47,7 +47,7 @@ public static class ItemListEndpoint
                     : Results.Extensions.InternalServerError(newList.FirstError.Description);
             }
 
-            return Results.Text(newList.Value.Url);
+            return Results.Text(newList.Value);
         });
 
         group.MapDelete("/delete-action", async (

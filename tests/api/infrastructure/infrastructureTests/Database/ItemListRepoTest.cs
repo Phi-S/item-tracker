@@ -304,23 +304,25 @@ public class ItemListRepoTest
         var itemListRepo = unitOfWork.ItemListRepo;
 
         const string userId = "test_list_user_id";
+        const string listUrl = "test_list_url";
         const string listName = "test_list_name";
         const string listDescription = "test_list_description";
         const string currency = "test_list_currency";
         const bool makeListPublic = false;
-        var list = await itemListRepo.CreateNewList(userId, listName, listDescription, currency, makeListPublic);
+        var list = await itemListRepo.CreateNewList(userId, listUrl, listName, listDescription, currency,
+            makeListPublic);
         await unitOfWork.Save();
 
         var dbContext = provider.GetRequiredService<XDbContext>();
         var allLists = dbContext.Lists.ToList();
-        Assert.True(allLists.Count == 1);
+        Assert.Single(allLists);
         Assert.Equal(userId, list.UserId);
         Assert.Equal(listName, list.Name);
         Assert.Equal(listDescription, list.Description);
         Assert.Equal(currency, list.Currency);
         Assert.Equal(makeListPublic, list.Public);
         var listInDb = allLists.First();
-        Assert.True(allLists.Count == 1);
+        Assert.Single(allLists);
         Assert.Equal(userId, listInDb.UserId);
         Assert.Equal(listName, listInDb.Name);
         Assert.Equal(listDescription, listInDb.Description);
@@ -503,7 +505,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
         await dbContext.SaveChangesAsync();
-        
+
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
         const string updatedName = "updated_list_name";
         await unitOfWork.ItemListRepo.UpdateName(list.Entity.Id, updatedName);
@@ -512,7 +514,7 @@ public class ItemListRepoTest
         Assert.NotNull(updatedList);
         Assert.Equal(updatedName, updatedList.Name);
     }
-    
+
     [Fact]
     public async Task UpdateDescriptionTest()
     {
@@ -533,7 +535,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
         await dbContext.SaveChangesAsync();
-        
+
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
         const string updatedDescription = "updated_list_description";
         await unitOfWork.ItemListRepo.UpdateDescription(list.Entity.Id, updatedDescription);
@@ -542,7 +544,7 @@ public class ItemListRepoTest
         Assert.NotNull(updatedList);
         Assert.Equal(updatedDescription, updatedList.Description);
     }
-    
+
     [Fact]
     public async Task UpdatePublicTest()
     {
@@ -563,7 +565,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
         await dbContext.SaveChangesAsync();
-        
+
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
         await unitOfWork.ItemListRepo.UpdatePublic(list.Entity.Id, true);
         await unitOfWork.Save();
@@ -571,7 +573,7 @@ public class ItemListRepoTest
         Assert.NotNull(updatedList);
         Assert.True(updatedList.Public);
     }
-    
+
     [Fact]
     public async Task GetItemActionByIdTest()
     {
@@ -602,7 +604,7 @@ public class ItemListRepoTest
             CreatedUtc = default
         });
         await dbContext.SaveChangesAsync();
-        
+
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
         var actionFromDb = await unitOfWork.ItemListRepo.GetItemActionById(action.Entity.Id);
         Assert.Equal(action.Entity.Id, actionFromDb.Id);

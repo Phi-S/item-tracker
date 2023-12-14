@@ -66,12 +66,12 @@ public static class ItemListMapper
         {
             steamSellPrice = priceForItem.SteamPriceCentsUsd is null
                 ? null
-                : ExchangeRateHelper.ApplyExchangeRate(priceRefresh.UsdToEurExchangeRate,
-                    priceForItem.SteamPriceCentsUsd.Value);
+                : ExchangeRateHelper.ApplyExchangeRate(priceForItem.SteamPriceCentsUsd.Value,
+                    priceRefresh.UsdToEurExchangeRate);
             buff163SellPrice = priceForItem.Buff163PriceCentsUsd is null
                 ? null
-                : ExchangeRateHelper.ApplyExchangeRate(priceRefresh.UsdToEurExchangeRate,
-                    priceForItem.Buff163PriceCentsUsd.Value);
+                : ExchangeRateHelper.ApplyExchangeRate(priceForItem.Buff163PriceCentsUsd.Value,
+                    priceRefresh.UsdToEurExchangeRate);
         }
         else
         {
