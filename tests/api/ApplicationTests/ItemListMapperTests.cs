@@ -241,7 +241,7 @@ public class ItemListMapperTest
         };
 
         // Act
-        var snapshotResponse = ItemListMapper.ListSnapshotResponseNew(snapshot, itemAction, prices);
+        var snapshotResponse = ItemListMapper.ListSnapshotResponse(snapshot, itemAction, prices);
         Assert.False(snapshotResponse.IsError);
         var snapshotResponseValue = snapshotResponse.Value;
         Assert.Equal(58, snapshotResponseValue.InvestedCapital);

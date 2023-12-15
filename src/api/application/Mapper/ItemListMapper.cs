@@ -160,7 +160,7 @@ public static class ItemListMapper
 
     #region ListSnapshotResponse
 
-    public static ErrorOr<ListSnapshotResponse> ListSnapshotResponseNew(
+    public static ErrorOr<ListSnapshotResponse> ListSnapshotResponse(
         ItemListSnapshotDbModel itemListSnapshot,
         List<ItemListItemActionDbModel> listActions,
         List<ItemPriceDbModel> prices)
@@ -215,8 +215,7 @@ public static class ItemListMapper
             totalItemCount += itemCountForItemId;
 
             var itemId = actionItemGroup.Key;
-            var priceForItemId = prices.FirstOrDefault(price =>
-                price.ItemPriceRefresh.Id == itemListSnapshot.ItemPriceRefresh.Id && price.ItemId == itemId);
+            var priceForItemId = prices.FirstOrDefault(price => price.ItemId == itemId);
             if (priceForItemId is not null)
             {
                 if (priceForItemId.SteamPriceCentsUsd is not null)
@@ -283,7 +282,7 @@ public static class ItemListMapper
 
         foreach (var snapshot in listSnapshots.OrderBy(value => value.CreatedUtc))
         {
-            var listSnapshotResponse = ListSnapshotResponseNew(snapshot, listActions, prices);
+            var listSnapshotResponse = ListSnapshotResponse(snapshot, listActions, prices);
             if (listSnapshotResponse.IsError)
             {
                 return listSnapshotResponse.FirstError;
