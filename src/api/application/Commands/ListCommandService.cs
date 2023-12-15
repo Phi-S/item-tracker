@@ -213,6 +213,13 @@ public class ListCommandService
         }
 
         await _unitOfWork.ItemListRepo.AddItemAction("B", list.Value, itemId, unitPrice, amount);
+        var latestPriceRefresh = await _unitOfWork.ItemPriceRepo.GetLatest();
+        if (latestPriceRefresh.IsError)
+        {
+            return latestPriceRefresh.FirstError;
+        }
+
+        await _unitOfWork.ItemListRepo.NewSnapshot(list.Value, latestPriceRefresh.Value);
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
