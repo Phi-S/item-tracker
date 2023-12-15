@@ -1,4 +1,6 @@
-﻿using infrastructure.Database.Models;
+﻿using System.Runtime.InteropServices.JavaScript;
+using ErrorOr;
+using infrastructure.Database.Models;
 using infrastructure.ExchangeRates;
 using infrastructure.Items;
 using shared.Currencies;
@@ -158,44 +160,94 @@ public static class ItemListMapper
 
     #region ListSnapshotResponse
 
-    private static ListSnapshotResponse ListSnapshotResponse(
+    public static ErrorOr<ListSnapshotResponse> ListSnapshotResponseNew(
         ItemListSnapshotDbModel itemListSnapshot,
-        List<ItemListItemActionDbModel> listActions)
+        List<ItemListItemActionDbModel> listActions,
+        List<ItemPriceDbModel> prices)
     {
+        var list = itemListSnapshot.List;
+
         long totalInvestedCapital = 0;
         long totalItemCount = 0;
         long salesValue = 0;
         long profit = 0;
+        long steamValueUsdCent = 0;
+        long buff163ValueUsdCent = 0;
         var actionsGroupedByItem = listActions.GroupBy(action => action.ItemId);
         foreach (var actionItemGroup in actionsGroupedByItem)
         {
-            var buyPrices = new List<long>();
-            var itemCount = 0;
-            var actions = actionItemGroup
+            var buyPricesForItemId = new List<long>();
+            var itemCountForItemId = 0;
+            var actionsForSnapshot = actionItemGroup
                 .Where(action => action.CreatedUtc <= itemListSnapshot.CreatedUtc)
                 .OrderBy(action => action.CreatedUtc);
-            foreach (var action in actions)
+            foreach (var action in actionsForSnapshot)
             {
+                if (action.List.Id != list.Id)
+                {
+                    return Error.Failure(
+                        $"One item action (ActionId: {action.Id} | ListId {action.List.Id}) is not for the List from the list snapshot (SnapshotId: {itemListSnapshot.Id} | ListId: {itemListSnapshot.List.Id})");
+                }
+
                 if (action.Action.Equals("B"))
                 {
-                    if (itemCount == 0)
+                    if (itemCountForItemId == 0)
                     {
-                        buyPrices.Clear();
+                        buyPricesForItemId.Clear();
                     }
 
-                    buyPrices.AddRange(Enumerable.Repeat(action.UnitPrice, action.Amount));
-                    itemCount += action.Amount;
+                    buyPricesForItemId.AddRange(Enumerable.Repeat(action.UnitPrice, action.Amount));
+                    itemCountForItemId += action.Amount;
                 }
                 else if (action.Action.Equals("S"))
                 {
                     salesValue += action.UnitPrice * action.Amount;
-                    profit += (long)Math.Round((action.UnitPrice - buyPrices.Average()) * action.Amount, 0);
-                    itemCount -= action.Amount;
+                    profit += (long)Math.Round((action.UnitPrice - buyPricesForItemId.Average()) * action.Amount, 0);
+                    itemCountForItemId -= action.Amount;
                 }
             }
 
-            totalInvestedCapital += buyPrices.Count == 0 ? 0 : (long)Math.Round(buyPrices.Average() * itemCount, 0);
-            totalItemCount += itemCount;
+
+            if (buyPricesForItemId.Count > 0 && itemCountForItemId > 0)
+            {
+                totalInvestedCapital += (long)Math.Round(buyPricesForItemId.Average() * itemCountForItemId, 0);
+            }
+
+            totalItemCount += itemCountForItemId;
+
+            var itemId = actionItemGroup.Key;
+            var priceForItemId = prices.FirstOrDefault(price =>
+                price.ItemPriceRefresh.Id == itemListSnapshot.ItemPriceRefresh.Id && price.ItemId == itemId);
+            if (priceForItemId is not null)
+            {
+                if (priceForItemId.SteamPriceCentsUsd is not null)
+                {
+                    steamValueUsdCent += priceForItemId.SteamPriceCentsUsd.Value * itemCountForItemId;
+                }
+
+                if (priceForItemId.Buff163PriceCentsUsd is not null)
+                {
+                    buff163ValueUsdCent += priceForItemId.Buff163PriceCentsUsd.Value * itemCountForItemId;
+                }
+            }
+        }
+
+        long steamValue;
+        long buff163Value;
+        if (list.Currency.Equals(CurrenciesConstants.USD))
+        {
+            steamValue = steamValueUsdCent;
+            buff163Value = buff163ValueUsdCent;
+        }
+        else if (list.Currency.Equals(CurrenciesConstants.EURO))
+        {
+            var usdToEurExchangeRate = itemListSnapshot.ItemPriceRefresh.UsdToEurExchangeRate;
+            steamValue = ExchangeRateHelper.ApplyExchangeRate(steamValueUsdCent, usdToEurExchangeRate);
+            buff163Value = ExchangeRateHelper.ApplyExchangeRate(buff163ValueUsdCent, usdToEurExchangeRate);
+        }
+        else
+        {
+            return Error.Failure(description: $"Currency \"{list.Currency}\" is not implemented");
         }
 
         return new ListSnapshotResponse(
@@ -203,20 +255,21 @@ public static class ItemListMapper
             totalItemCount,
             salesValue,
             profit,
-            itemListSnapshot.SteamValue,
-            itemListSnapshot.BuffValue,
+            steamValue,
+            buff163Value,
             itemListSnapshot.CreatedUtc
         );
     }
 
-    private static Task<List<ListSnapshotResponse>> MapListSnapshotResponses(
+    private static ErrorOr<List<ListSnapshotResponse>> MapListSnapshotResponses(
         IReadOnlyCollection<ItemListSnapshotDbModel> listSnapshots,
-        List<ItemListItemActionDbModel> listActions)
+        List<ItemListItemActionDbModel> listActions,
+        List<ItemPriceDbModel> prices)
     {
         var result = new List<ListSnapshotResponse>();
         if (listSnapshots.Count == 0)
         {
-            return Task.FromResult(result);
+            return result;
         }
 
         if (listActions.Count == 0)
@@ -226,21 +279,26 @@ public static class ItemListMapper
                 result.Add(new ListSnapshotResponse(0, 0, 0, 0, 0, 0, snapshot.CreatedUtc));
             }
 
-            return Task.FromResult(result);
+            return result;
         }
 
         foreach (var snapshot in listSnapshots.OrderBy(value => value.CreatedUtc))
         {
-            result.Add(ListSnapshotResponse(snapshot, listActions));
+            var listSnapshotResponse = ListSnapshotResponseNew(snapshot, listActions, prices);
+            if (listSnapshotResponse.IsError)
+            {
+                return listSnapshotResponse.FirstError;
+            }
+            result.Add(listSnapshotResponse.Value);
         }
 
-        return Task.FromResult(result);
+        return result;
     }
 
     #endregion
 
 
-    public static async Task<ListResponse> MapToListResponse(
+    public static async Task<ErrorOr<ListResponse>> MapToListResponse(
         ItemListDbModel itemListDbModel,
         List<ItemListSnapshotDbModel> itemListSnapshots,
         List<ItemListItemActionDbModel> itemListItemActions,
@@ -255,8 +313,12 @@ public static class ItemListMapper
             priceRefresh,
             prices
         );
-        var mapListSnapshotResponsesTask = MapListSnapshotResponses(itemListSnapshots, itemListItemActions);
-        await Task.WhenAll(mapListItemResponsesTask, mapListSnapshotResponsesTask);
+        var listSnapshotResponses = MapListSnapshotResponses(itemListSnapshots, itemListItemActions, prices);
+        if (listSnapshotResponses.IsError)
+        {
+            return listSnapshotResponses.FirstError;
+        }
+        await mapListItemResponsesTask;
 
         var listResponse = new ListResponse(
             itemListDbModel.Name,
@@ -266,7 +328,7 @@ public static class ItemListMapper
             itemListDbModel.Public,
             itemListDbModel.UserId,
             mapListItemResponsesTask.Result,
-            mapListSnapshotResponsesTask.Result);
+            listSnapshotResponses.Value);
 
         return listResponse;
     }

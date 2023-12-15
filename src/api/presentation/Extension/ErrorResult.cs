@@ -10,7 +10,7 @@ public class ErrorResult(int statusCode, string message) : IResult
     public int StatusCode { get; } = statusCode;
     public string Message { get; } = message;
 
-    public async Task ExecuteAsync(HttpContext httpContext)
+    public Task ExecuteAsync(HttpContext httpContext)
     {
         httpContext.Response.ContentType = MediaTypeNames.Application.Json;
         httpContext.Response.StatusCode = StatusCode;
@@ -18,6 +18,6 @@ public class ErrorResult(int statusCode, string message) : IResult
 
         var responseJson = JsonSerializer.Serialize(resultObject);
         httpContext.Response.ContentLength = Encoding.UTF8.GetByteCount(responseJson);
-        await httpContext.Response.WriteAsync(responseJson);
+        return httpContext.Response.WriteAsync(responseJson);
     }
 }

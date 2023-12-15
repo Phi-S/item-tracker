@@ -47,17 +47,17 @@ public class ListDisplayRazor : ComponentBase
         var buffPriceValues = new List<double>();
         var investedCapitalValues = new List<double>();
 
-        if (List.ListSnapshots.Count != 0)
+        if (List.Snapshots.Count != 0)
         {
-            foreach (var listValue in listResponse.ListSnapshots)
+            foreach (var listValue in listResponse.Snapshots)
             {
-                dataLabels.Add(listValue.CreatedAt.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
-                steamPriceValues.Add(listValue.SteamValue is null
+                dataLabels.Add(listValue.CreatedUtc.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
+                steamPriceValues.Add(listValue.SteamSellPrice is null
                     ? 0
-                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.SteamValue.Value));
-                buffPriceValues.Add(listValue.Buff163Value is null
+                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.SteamSellPrice.Value));
+                buffPriceValues.Add(listValue.Buff163SellPrice is null
                     ? 0
-                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.Buff163Value.Value));
+                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.Buff163SellPrice.Value));
                 investedCapitalValues.Add(CurrencyHelper.ToDouble(listResponse.Currency, listValue.InvestedCapital));
             }
         }

@@ -6,8 +6,6 @@ public class ItemListSnapshotDbModel
 {
     [Key] public long Id { get; set; }
     [Required] public required ItemListDbModel List { get; set; }
-    public long? SteamValue { get; set; }
-    public long? BuffValue { get; set; }
     [Required] public required ItemPriceRefreshDbModel ItemPriceRefresh { get; set; }
     [Required] public required DateTime CreatedUtc { get; set; }
 }

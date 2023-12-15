@@ -28,34 +28,34 @@ public partial class ItemTrackerApiService
         _logger = logger;
     }
 
-    private async Task<ErrorOr<string>> DeleteWithAuthAsync(string url, string? accessToken)
+    private Task<ErrorOr<string>> DeleteWithAuthAsync(string url, string? accessToken)
     {
-        return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Delete, url), accessToken);
+        return SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Delete, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> PutWithAuthAsync(string url, string? accessToken)
+    private Task<ErrorOr<string>> PutWithAuthAsync(string url, string? accessToken)
     {
-        return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Put, url), accessToken);
+        return SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Put, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> GetWithAuthAsync(string url, string? accessToken)
+    private Task<ErrorOr<string>> GetWithAuthAsync(string url, string? accessToken)
     {
-        return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Get, url), accessToken);
+        return SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Get, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> PostWithAuthAsync(string url, string? accessToken)
+    private Task<ErrorOr<string>> PostWithAuthAsync(string url, string? accessToken)
     {
-        return await SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Post, url), accessToken);
+        return SendWithAuthAsync(new HttpRequestMessage(HttpMethod.Post, url), accessToken);
     }
 
-    private async Task<ErrorOr<string>> PostWithAuthAsync(string url, HttpContent content, string? accessToken)
+    private Task<ErrorOr<string>> PostWithAuthAsync(string url, HttpContent content, string? accessToken)
     {
         var request = new HttpRequestMessage(
             HttpMethod.Post,
             url
         );
         request.Content = content;
-        return await SendWithAuthAsync(request, accessToken);
+        return SendWithAuthAsync(request, accessToken);
     }
 
     private async Task<ErrorOr<string>> SendWithAuthAsync(HttpRequestMessage requestMessage, string? accessToken)
@@ -69,9 +69,9 @@ public partial class ItemTrackerApiService
         return await SendAsync(requestMessage);
     }
 
-    private async Task<ErrorOr<string>> GetAsync(string url)
+    private Task<ErrorOr<string>> GetAsync(string url)
     {
-        return await SendAsync(new HttpRequestMessage(HttpMethod.Get, url));
+        return SendAsync(new HttpRequestMessage(HttpMethod.Get, url));
     }
 
     private async Task<ErrorOr<string>> SendAsync(HttpRequestMessage requestMessage)

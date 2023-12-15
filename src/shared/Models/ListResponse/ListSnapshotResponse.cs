@@ -11,10 +11,10 @@ public record ListSnapshotResponse(
     long SalesValue,
     [property: JsonRequired, JsonPropertyName("profit")]
     long Profit,
-    [property: JsonRequired, JsonPropertyName("steam_value")]
-    long? SteamValue,
-    [property: JsonRequired, JsonPropertyName("buff163_value")]
-    long? Buff163Value,
-    [property: JsonRequired, JsonPropertyName("created_at")]
-    DateTime CreatedAt
+    [property: JsonRequired, JsonPropertyName("steam_sell_price")]
+    long? SteamSellPrice,
+    [property: JsonRequired, JsonPropertyName("buff163_sell_price")]
+    long? Buff163SellPrice,
+    [property: JsonRequired, JsonPropertyName("created_utc")]
+    DateTime CreatedUtc
 );

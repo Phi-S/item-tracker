@@ -18,10 +18,10 @@
             </div>
         </div>
         <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
-            @List.Items.Sum(item => item.AmountInvested) Items
+            @List.Items.Sum(item => item.ItemCount) Items
         </div>
         <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
-            @CurrencyHelper.FormatCurrency(List.Currency, List.Items.Sum(item => item.CapitalInvested))
+            @CurrencyHelper.FormatCurrency(List.Currency, List.Items.Sum(item => item.InvestedCapital))
         </div>
     </button>
 

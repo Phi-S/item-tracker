@@ -2,18 +2,6 @@
 
 namespace shared.Models.ListResponse;
 
-public record ListItemActionResponse(
-    [property: JsonRequired, JsonPropertyName("action_id")]
-    long ActionId,
-    [property: JsonRequired, JsonPropertyName("action")]
-    string Action,
-    [property: JsonRequired, JsonPropertyName("amount")]
-    int Amount,
-    [property: JsonRequired, JsonPropertyName("price")]
-    long Price,
-    [property: JsonRequired, JsonPropertyName("created_utc")]
-    DateTime CreatedAt);
-
 public record ListItemResponse(
     [property: JsonRequired, JsonPropertyName("item_id")]
     long ItemId,
@@ -21,11 +9,11 @@ public record ListItemResponse(
     string ItemName,
     [property: JsonRequired, JsonPropertyName("item_image")]
     string ItemImage,
-    [property: JsonRequired, JsonPropertyName("capital_invested")]
-    long CapitalInvested,
+    [property: JsonRequired, JsonPropertyName("invested_capital")]
+    long InvestedCapital,
     // CurrentAmountInvested == buyAmount - sellAmount
-    [property: JsonRequired, JsonPropertyName("amount_invested")]
-    int AmountInvested,
+    [property: JsonRequired, JsonPropertyName("item_count")]
+    int ItemCount,
     // CurrentAverageBuyPrice == The average buy price since the last time the item amount was 0
     [property: JsonRequired, JsonPropertyName("average_buy_price")]
     long AverageBuyPrice,
@@ -40,3 +28,15 @@ public record ListItemResponse(
     [property: JsonRequired, JsonPropertyName("actions")]
     List<ListItemActionResponse> Actions
 );
+
+public record ListItemActionResponse(
+    [property: JsonRequired, JsonPropertyName("action_id")]
+    long ActionId,
+    [property: JsonRequired, JsonPropertyName("action")]
+    string Action,
+    [property: JsonRequired, JsonPropertyName("amount")]
+    int Amount,
+    [property: JsonRequired, JsonPropertyName("price")]
+    long Price,
+    [property: JsonRequired, JsonPropertyName("created_utc")]
+    DateTime CreatedUtc);

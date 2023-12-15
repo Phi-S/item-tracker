@@ -11,7 +11,7 @@ public class ItemListDbModel
     [Required] [MaxLength(64)] public required string Name { get; set; }
     [MaxLength(256)] public string? Description { get; set; }
     [Required] [MaxLength(22)] public required string Url { get; set; }
-    [Required] public required string Currency { get; set; }
+    [Required] [MaxLength(5)] public required string Currency { get; set; }
     [Required] public required bool Public { get; set; }
     [Required] public required bool Deleted { get; set; }
     [Required] public required DateTime UpdatedUtc { get; set; }

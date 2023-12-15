@@ -44,9 +44,9 @@ public class GlobalExceptionHandlerMiddleware(ILogger<GlobalExceptionHandlerMidd
         }
     }
 
-    private static async Task WriteInternalServerErrorResponse(HttpContext context, string message)
+    private static Task WriteInternalServerErrorResponse(HttpContext context, string message)
     {
         var response = Results.Extensions.InternalServerError(message);
-        await response.ExecuteAsync(context);
+        return response.ExecuteAsync(context);
     }
 }
