@@ -207,7 +207,6 @@ public static class ItemListMapper
                 }
             }
 
-
             if (buyPricesForItemId.Count > 0 && itemCountForItemId > 0)
             {
                 totalInvestedCapital += (long)Math.Round(buyPricesForItemId.Average() * itemCountForItemId, 0);
@@ -289,6 +288,7 @@ public static class ItemListMapper
             {
                 return listSnapshotResponse.FirstError;
             }
+
             result.Add(listSnapshotResponse.Value);
         }
 
@@ -318,6 +318,7 @@ public static class ItemListMapper
         {
             return listSnapshotResponses.FirstError;
         }
+
         await mapListItemResponsesTask;
 
         var listResponse = new ListResponse(

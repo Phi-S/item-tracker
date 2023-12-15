@@ -79,13 +79,23 @@ public class ItemListRepo
     {
         var list = await _dbContext.Lists.FindAsync(listId);
         list.ThrowIfNull().Throw().IfTrue(list.Deleted);
-        var snapshots = _dbContext.ListSnapshots.Where(snapshot => snapshot.List.Id == listId).ToList();
-        var itemAction = _dbContext.ItemActions.Where(action => action.List.Id == listId).ToList();
-        var lastPriceRefresh = await _dbContext.PricesRefresh.OrderByDescending(priceRefresh => priceRefresh.CreatedUtc)
+        var snapshots = _dbContext.ListSnapshots
+            .Where(snapshot => snapshot.List.Id == listId)
+            .Include(snapshot => snapshot.List)
+            .Include(snapshot => snapshot.ItemPriceRefresh)
+            .ToList();
+        var itemAction = _dbContext.ItemActions
+            .Where(action => action.List.Id == listId)
+            .ToList();
+        var lastPriceRefresh = await _dbContext.PricesRefresh
+            .OrderByDescending(priceRefresh => priceRefresh.CreatedUtc)
             .FirstAsync();
-        var itemsInListIds = itemAction.GroupBy(action => action.ItemId).Select(group => group.Key);
-        var pricesForItemsInList = _dbContext.Prices.Where(price =>
-            price.ItemPriceRefresh.Id == lastPriceRefresh.Id && itemsInListIds.Contains(price.ItemId)).ToList();
+        var itemsInListIds = itemAction
+            .GroupBy(action => action.ItemId)
+            .Select(group => group.Key);
+        var pricesForItemsInList = _dbContext.Prices
+            .Where(price => price.ItemPriceRefresh.Id == lastPriceRefresh.Id && itemsInListIds.Contains(price.ItemId))
+            .ToList();
 
         return (list, snapshots, itemAction, lastPriceRefresh, pricesForItemsInList);
     }
