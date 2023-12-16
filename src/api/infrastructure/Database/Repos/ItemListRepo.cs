@@ -99,7 +99,7 @@ public class ItemListRepo
 
         return (list, snapshots, itemAction, lastPriceRefresh, pricesForItemsInList);
     }
-
+    
     public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
     {
         return Task.FromResult(_dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
@@ -196,5 +196,18 @@ public class ItemListRepo
             ItemPriceRefresh = priceRefresh,
             CreatedUtc = DateTime.UtcNow
         });
+    }
+
+    public async Task NewSnapshotForEveryList(ItemPriceRefreshDbModel priceRefresh)
+    {
+        foreach (var list in _dbContext.Lists.Where(list => list.Deleted == false))
+        {
+            await _dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
+            {
+                List = list,
+                ItemPriceRefresh = priceRefresh,
+                CreatedUtc = priceRefresh.CreatedUtc
+            });
+        }
     }
 }

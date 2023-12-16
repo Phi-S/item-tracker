@@ -295,7 +295,6 @@ public static class ItemListMapper
 
     #endregion
 
-
     public static async Task<ErrorOr<ListResponse>> MapToListResponse(
         ItemListDbModel itemListDbModel,
         List<ItemListSnapshotDbModel> itemListSnapshots,
