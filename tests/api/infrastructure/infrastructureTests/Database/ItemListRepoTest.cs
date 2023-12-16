@@ -31,7 +31,7 @@ public class ItemListRepoTest
         const string listUrl = "test_list_url";
         const string listName = "test_list_name";
         const string listDescription = "test_list_description";
-        const string currency = "test_list_currency";
+        const string currency = "EUR";
         const bool makeListPublic = false;
         var list = await itemListRepo.CreateNewList(userId, listUrl, listName, listDescription, currency,
             makeListPublic);
