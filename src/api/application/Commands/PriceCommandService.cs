@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using application.Cache;
 using ErrorOr;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
@@ -16,19 +17,22 @@ public class PriceCommandService
     private readonly ItemPriceService _itemPriceService;
     private readonly ExchangeRatesService _exchangeRatesService;
     private readonly UnitOfWork _unitOfWork;
+    private readonly ListResponseCacheService _listResponseCacheService;
 
     public PriceCommandService(
         ILogger<PriceCommandService> logger,
         ItemsService itemsService,
         ItemPriceService itemPriceService,
         ExchangeRatesService exchangeRatesService,
-        UnitOfWork unitOfWork)
+        UnitOfWork unitOfWork,
+        ListResponseCacheService listResponseCacheService)
     {
         _logger = logger;
         _itemsService = itemsService;
         _itemPriceService = itemPriceService;
         _exchangeRatesService = exchangeRatesService;
         _unitOfWork = unitOfWork;
+        _listResponseCacheService = listResponseCacheService;
     }
 
     public async Task<ErrorOr<Success>> RefreshItemPrices()
@@ -86,6 +90,7 @@ public class PriceCommandService
         await _unitOfWork.ItemPriceRepo.Add(dbPrices);
         await _unitOfWork.ItemListRepo.NewSnapshotForEveryList(priceRefresh);
         await _unitOfWork.Save();
+        _listResponseCacheService.DeleteCache();
         _logger.LogInformation("Item prices refreshed");
         return Result.Success;
     }

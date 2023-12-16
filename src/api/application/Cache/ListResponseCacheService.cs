@@ -37,4 +37,12 @@ public class ListResponseCacheService
             ListResponses.Remove(listUrl);
         }
     }
+
+    public void DeleteCache()
+    {
+        lock (ListResponsesLock)
+        {
+            ListResponses.Clear();
+        }
+    }
 }
