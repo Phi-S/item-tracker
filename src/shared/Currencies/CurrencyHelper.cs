@@ -16,6 +16,8 @@ public static class CurrencyHelper
 
         throw new UnknownCurrencyException(currency);
     }
+
+    public static string FormatCurrency(string currency, long? value) => FormatCurrency(currency, value ?? 0);
     
     public static string FormatCurrency(string currency, long value)
     {

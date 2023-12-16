@@ -97,7 +97,6 @@ public class ItemSearchComponentRazor : ComponentBase
 
     protected void OnSelect(ItemSearchResponse item)
     {
-        Console.WriteLine($"On select {item}");
         Reset(item);
     }
 

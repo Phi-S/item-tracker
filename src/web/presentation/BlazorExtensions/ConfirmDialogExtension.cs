@@ -4,7 +4,8 @@ namespace presentation.BlazorExtensions;
 
 public static class ConfirmDialogExtension
 {
-    private static readonly ConfirmDialogOptions VerticallyCenteredOption = new() { IsVerticallyCentered = true };
+    private static readonly ConfirmDialogOptions VerticallyCenteredOption = new()
+        { IsVerticallyCentered = true, DialogCssClass = "text-center" };
 
     public static Task<bool> Show(this ConfirmDialog confirmDialog, string title, string message1,
         string message2)
@@ -16,5 +17,4 @@ public static class ConfirmDialogExtension
     {
         return confirmDialog.ShowAsync(title, message, VerticallyCenteredOption);
     }
-
 }

@@ -1,5 +1,6 @@
 ﻿@page "/list/{ListUrl}"
 @using shared.Currencies
+@using presentation.BlazorExtensions
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
@@ -24,10 +25,13 @@
                 <th scope="col">Buy price</th>
                 <th scope="col">Steam price</th>
                 <th scope="col">Performance</th>
-                <th scope="col"></th>
-                <th scope="col">
-                    <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">Add Buy entry</button>
-                </th>
+                @if (IsOwnList)
+                {
+                    <th scope="col"></th>
+                    <th scope="col">
+                        <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">Add Buy entry</button>
+                    </th>
+                }
             </tr>
             </thead>
             <tbody>
@@ -54,23 +58,26 @@
                     </td>
                     <td class="col-1">
                         <Tooltip Title="Price for one item">
-                            <span>@CurrencyHelper.FormatCurrency(List.Currency, item.SteamSellPrice ?? 0) /1</span>
+                            <span>@CurrencyHelper.FormatCurrency(List.Currency, item.SteamSellPrice) /1</span>
                         </Tooltip>
                         <br/>
                         <Tooltip Title="Total price">
-                            <span>@CurrencyHelper.FormatCurrency(List.Currency, (item.SteamSellPrice ?? 0) * item.ItemCount)</span>
+                            <span>@CurrencyHelper.FormatCurrency(List.Currency, (item.SteamSellPrice) * item.ItemCount)</span>
                         </Tooltip>
                     </td>
                     <td class="col-1 text-nowrap">
-                        <span>@GetPerformanceString(item.AverageBuyPrice, item.SteamSellPrice)%</span>
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, ((item.SteamSellPrice ?? 0) - item.AverageBuyPrice) * item.ItemCount)</span>
+                        <span>@item.GetPerformancePercentString()%</span>
+                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.GetPerformanceValueString())</span>
                     </td>
-                    <td class="col-1">
-                        <button class="btn bi bi-chevron-down" @onclick="() => ShowItemActions(item)"></button>
-                    </td>
-                    <td class="col-2">
-                        <button class="btn btn-outline-danger w-100" @onclick="() => AddSellAction(item)">Add Sell entry</button>
-                    </td>
+                    @if (IsOwnList)
+                    {
+                        <td class="col-1">
+                            <button class="btn bi bi-chevron-down" @onclick="() => ShowItemActions(item)"></button>
+                        </td>
+                        <td class="col-2">
+                            <button class="btn btn-outline-danger w-100" @onclick="() => AddSellAction(item)">Add Sell entry</button>
+                        </td>
+                    }
                 </tr>
             }
             </tbody>

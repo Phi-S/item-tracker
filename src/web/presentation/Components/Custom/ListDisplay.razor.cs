@@ -17,22 +17,23 @@ public class ListDisplayRazor : ComponentBase
     [Inject] public IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
-    
+
     [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
     [Parameter] public bool DisplayGoToListButton { get; set; } = true;
 
     protected ConfirmDialog ConfirmDialogRef { get; set; } = default!;
     protected LineChart LineChartRef { get; set; } = default!;
 
-    protected bool IsOwnList = false;
+    protected bool IsOwnList { get; private set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await RenderDiagram(List);
             var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            IsOwnList = List.UserId.Equals(authenticationState.User.Claims.UserId());
+            IsOwnList = authenticationState.User.IsOwnList(List);
+            await RenderDiagram(List);
+            StateHasChanged();
             await base.OnAfterRenderAsync(firstRender);
         }
     }
@@ -158,7 +159,6 @@ public class ListDisplayRazor : ComponentBase
             diagramData.lineChartOptionsExtension,
             null
         );
-        StateHasChanged();
     }
 
     public async Task UpdateDiagram(ListResponse listResponse)
@@ -177,14 +177,14 @@ public class ListDisplayRazor : ComponentBase
             data,
             diagramData.lineChartOptionsExtension
         );
-        StateHasChanged();
     }
 
     protected async Task MakeListPublic()
     {
-        var confirmation = await ConfirmDialogRef.ShowAsync(
-            "Are you sure you want to make the list public",
-            "Public lists can be seen by everyone"
+        var confirmation = await ConfirmDialogRef.Show(
+            List.Name,
+            "Public lists can be seen by everyone.",
+            "Are you sure you want to make the list public?"
         );
         if (confirmation)
         {
@@ -192,7 +192,8 @@ public class ListDisplayRazor : ComponentBase
             var makeListPublic = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, true);
             if (makeListPublic.IsError)
             {
-                ToastService.Error($"Failed to set list to public. {makeListPublic.FirstError.Description}");
+                ToastService.Error(
+                    $"Failed to set list \"{List.Name}\" to public. {makeListPublic.FirstError.Description}");
             }
             else
             {
@@ -206,8 +207,9 @@ public class ListDisplayRazor : ComponentBase
     protected async Task MakeListPrivate()
     {
         var confirmation = await ConfirmDialogRef.Show(
-            $"Are you sure you want to make the list \"{List.Name}\" private",
-            "Private lists can only be seen by yourself"
+            List.Name,
+            "Private lists can only be seen by yourself.",
+            $"Are you sure you want to make the list \"{List.Name}\" private?"
         );
         if (confirmation)
         {

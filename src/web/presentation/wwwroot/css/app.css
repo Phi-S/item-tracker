@@ -5,6 +5,7 @@
 .btn-dropdown {
     .btn;
     border-style: none;
+    background: none;
 }
 
 .valid.modified:not([type=checkbox]) {

@@ -8,20 +8,54 @@
 <ConfirmDialog @ref="ConfirmDialogRef"/>
 
 <div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
-    <button class="col-3 h-100 container btn border-end rounded-0" @onclick="() => NavigationManager.NavigateToList(List.Url)">
-        <div class="row row-cols-2 justify-content-center text-decoration-underline p-1" style="height: 15%">
-            @List.Name
-        </div>
-        <div class="row row-cols-8 justify-content-center p-1" style="font-size: small; height: 55%">
-            <div class="h-100">
-                @List.Description
+    <button class="col-3 btn border-end p-0 m-0 overflow-hidden" @onclick="() => NavigationManager.NavigateToList(List.Url)">
+        <div class="row border-bottom" style="height: 20%">
+            <div class="col-12 text-decoration-underline justify-content-center">
+                @List.Name
             </div>
         </div>
-        <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
-            @List.Items.Sum(item => item.ItemCount) Items
-        </div>
-        <div class="row row-cols-1 justify-content-center p-1" style="height: 15%">
-            @CurrencyHelper.FormatCurrency(List.Currency, List.Items.Sum(item => item.InvestedCapital))
+        <div style="height: 80%">
+            <div class="d-block d-md-none h-100">
+                <div class="row justify-content-center border-bottom p-1 h-50 d-flex justify-content-center align-items-center">
+                    Items:
+                    <br/>
+                    @List.ItemCount()
+                </div>
+                <div class="row justify-content-center p-1 h-50 d-flex justify-content-center align-items-center">
+                    Performance:
+                    <br/>
+                    @List.GetPerformancePercentString()
+                </div>
+            </div>
+
+
+            <div class="d-none d-md-block h-100">
+                <div class="row border-bottom h-50 m-0 p-0">
+                    <div class="col-6 border-end d-flex justify-content-center align-items-center">
+                        Items:
+                        <br/>
+                        @List.ItemCount()
+                    </div>
+                    <div class="col-6 d-flex justify-content-center align-items-center">
+                        Performance:
+                        <br/>
+                        @List.GetPerformancePercentString()
+                    </div>
+                </div>
+
+                <div class="row h-50 m-0 p-0 text-truncate">
+                    <div class="col-6 border-end d-flex justify-content-center align-items-center">
+                        Steam:
+                        <br/>
+                        @CurrencyHelper.FormatCurrency(List.Currency, List.SteamPrice())
+                    </div>
+                    <div class="col-6 d-flex justify-content-center align-items-center">
+                        Buff163:
+                        <br/>
+                        @CurrencyHelper.FormatCurrency(List.Currency, List.Buff163Price())
+                    </div>
+                </div>
+            </div>
         </div>
     </button>
 
@@ -29,7 +63,7 @@
         @if (IsOwnList)
         {
             <div class="position-relative d-flex z-3 justify-content-end dropstart">
-                <button class="btn-dropdown bi bi-gear position-absolute" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn-dropdown bi bi-gear position-absolute pt-1" data-bs-toggle="dropdown" aria-expanded="false">
                 </button>
                 <ul class="dropdown-menu text-center">
                     <li class="border-bottom">

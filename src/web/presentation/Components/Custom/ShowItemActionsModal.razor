@@ -4,8 +4,8 @@
 @using presentation.ItemTrackerApi
 @using shared.Currencies
 @using shared.Models.ListResponse
+@using Throw
 
-<ConfirmDialog @ref="ConfirmDialogRef" Class="text-center z-3"/>
 <Modal @ref="ModalRef" IsVerticallyCentered="true" HeaderCssClass="bg-dark">
     <HeaderTemplate>
         <div class="text-center w-100" style="color: white">@_item?.ItemName entries</div>
@@ -17,8 +17,9 @@
             {
                 foreach (var action in _item.Actions)
                 {
-                    <tr>
-                        <td>
+                    <tr class="">
+                        <td class="col-4">@action.CreatedUtc.AddHours(_browserDateTimeOffset)</td>
+                        <td class="col-2">
                             @if (action.Action.Equals("B"))
                             {
                                 <span style="color: green">Buy</span>
@@ -28,10 +29,9 @@
                                 <span style="color: red">Sell</span>
                             }
                         </td>
-                        <td>@action.CreatedUtc.AddHours(_browserDateTimeOffset)</td>
-                        <td>@action.Amount</td>
-                        <td>@CurrencyHelper.FormatCurrency(List.Currency, action.Price)</td>
-                        <td>
+                        <td class="col-2">@action.Amount</td>
+                        <td class="col-2">@CurrencyHelper.FormatCurrency(List.Currency, action.Price)</td>
+                        <td class="col-2">
                             <button class="btn bi bi-x-lg" @onclick="() => DeleteItemAction(action)"></button>
                         </td>
                     </tr>
@@ -44,6 +44,7 @@
         <Button Color="ButtonColor.Secondary" @onclick="ModalRef.HideAsync">Close</Button>
     </FooterTemplate>
 </Modal>
+<ConfirmDialog @ref="ConfirmDialogRef" Class="text-center"/>
 
 @code{
     [Inject] CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
@@ -55,7 +56,8 @@
     private Modal ModalRef { get; set; } = default!;
     private ConfirmDialog ConfirmDialogRef { get; set; } = default!;
     private ListItemResponse? _item = null;
-    
+    private Func<Task>? _afterDeleteItemActionAction;
+
     private int _browserDateTimeOffset = 0;
 
     protected override async Task OnInitializedAsync()
@@ -64,33 +66,44 @@
         await base.OnInitializedAsync();
     }
 
-    public Task Show(ListItemResponse item)
+    public Task Show(ListItemResponse item, Func<Task> afterDeleteItemActionAction)
     {
         _item = item;
+        _afterDeleteItemActionAction = afterDeleteItemActionAction;
         return ModalRef.ShowAsync();
     }
 
     private async Task DeleteItemAction(ListItemActionResponse action)
     {
-        var buySellString = action.Action.Equals("B") ? "Buy" : "Sell";
-        var actionString = $"{buySellString} | {action.CreatedUtc.AddHours(_browserDateTimeOffset)} | {action.Amount} | {CurrencyHelper.FormatCurrency(List.Currency, action.Price)}";
-        var confirmation = await ConfirmDialogRef.ShowAsync(
-            "Are you sure you want to delete this entry",
-            actionString,
-            "If you delete an entry it will no longer be used to calculate any dependent values (for example: Average buy price or Profit). Only delete entries if absolutely necessary"
-        );
-        if (confirmation)
+        try
         {
-            var token = AuthenticationStateProvider.Token?.AccessToken;
-            var deleteAction = await ItemTrackerApiService.DeleteAction(token, action.ActionId);
-            if (deleteAction.IsError)
+            var buySellString = action.Action.Equals("B") ? "Buy" : "Sell";
+            var actionString = $"{buySellString} entry: {action.CreatedUtc.AddHours(_browserDateTimeOffset)} | Amount: {action.Amount} |  Price: {CurrencyHelper.FormatCurrency(List.Currency, action.Price)}";
+            var confirmation = await ConfirmDialogRef.Show(
+                actionString,
+                "If you delete an entry it will no longer be used to calculate any dependent values (Average buy price or Profit).",
+                "Are you sure you want to delete this entry?"
+            );
+            if (confirmation)
             {
-                ToastService.Error($"Failed to delete action. {deleteAction.FirstError.Description} \n {actionString}");
+                var token = AuthenticationStateProvider.Token?.AccessToken;
+                var deleteAction = await ItemTrackerApiService.DeleteAction(token, action.ActionId);
+                if (deleteAction.IsError)
+                {
+                    ToastService.Error($"Failed to delete action. {deleteAction.FirstError.Description} \n {actionString}");
+                }
+                else
+                {
+                    ToastService.Info($"Action deleted \n {actionString}");
+                    await ModalRef.HideAsync();
+                    _afterDeleteItemActionAction.ThrowIfNull();
+                    await _afterDeleteItemActionAction.Invoke();
+                }
             }
-            else
-            {
-                ToastService.Info($"Action deleted \n {actionString}");
-            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
         }
     }
 

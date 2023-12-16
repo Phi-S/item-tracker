@@ -1,11 +1,18 @@
 ﻿using System.Security.Claims;
+using shared.Models.ListResponse;
 
 namespace presentation.Authentication;
 
 public static class ClaimsExtensionMethods
 {
-    public static string UserId(this IEnumerable<Claim> claims)
+    public static bool IsOwnList(this ClaimsPrincipal user, ListResponse list)
     {
-        return claims.First(claim => claim.Type.Equals("sub")).Value;
+        if (user.Identity is null || user.Identity.IsAuthenticated == false)
+        {
+            return false;
+        }
+
+        var sub = user.Claims.FirstOrDefault(claim => claim.Type.Equals("sub"));
+        return sub is not null && sub.Value.Equals(list.UserId);
     }
 }

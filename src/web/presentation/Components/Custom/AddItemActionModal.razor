@@ -6,6 +6,7 @@
 @using shared.Currencies
 @using shared.Models
 @using shared.Models.ListResponse
+@using Throw
 
 @attribute [Authorize]
 
@@ -66,7 +67,7 @@
     private int? _amountBind;
     private decimal? _priceBind;
 
-    public event EventHandler? ItemActionAdded;
+    private Func<Task>? _afterItemActionAddedAction;
     private string? _errorMessage;
 
     private Actions _currentAction = Actions.None;
@@ -78,7 +79,7 @@
         Sell
     }
 
-    public async Task ShowBuy()
+    public async Task ShowBuy(Func<Task> afterItemActionAddedAction)
     {
         _errorMessage = null;
         _currentAction = Actions.Buy;
@@ -86,9 +87,10 @@
         _priceBind = null;
         await ModalRef.ShowAsync();
         ItemSearchComponentRef.Reset();
+        _afterItemActionAddedAction = afterItemActionAddedAction;
     }
 
-    public async Task ShowSell(ListItemResponse item)
+    public async Task ShowSell(ListItemResponse item, Func<Task> afterItemActionAddedAction)
     {
         _errorMessage = null;
         _currentAction = Actions.Sell;
@@ -99,91 +101,100 @@
             new ItemSearchResponse(item.ItemId, item.ItemName, item.ItemImage),
             true
         );
+        _afterItemActionAddedAction = afterItemActionAddedAction;
     }
 
     private async Task AddItemAction()
     {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        if (string.IsNullOrWhiteSpace(accessToken))
+        try
         {
-            _errorMessage = "No access token found";
-            return;
-        }
-
-        var selectedItem = ItemSearchComponentRef.SelectedItemSearchResponse;
-        if (selectedItem is null)
-        {
-            _errorMessage = "No item selected";
-            return;
-        }
-
-        if (_amountBind is null or <= 0)
-        {
-            _errorMessage = "No amount entered";
-            return;
-        }
-
-        if (_priceBind is null or <= 0)
-        {
-            _errorMessage = "No price entered";
-            return;
-        }
-
-        var unitPrice = CurrencyHelper.CurrencyToSmallestUnit(List.Currency, _priceBind.Value);
-        if (_currentAction == Actions.Buy)
-        {
-            var buyItem = await ItemTrackerApiService.BuyItem(
-                accessToken,
-                List.Url,
-                selectedItem.Id,
-                _amountBind.Value,
-                unitPrice
-            );
-            if (buyItem.IsError)
+            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
-                _errorMessage = $"{buyItem.FirstError.Description}";
+                _errorMessage = "No access token found";
                 return;
             }
 
-            ToastService.Info($"Added buy entry for item \"{selectedItem.Name}\" Amount: {_amountBind.Value} Price for one: {unitPrice}");
+            var selectedItem = ItemSearchComponentRef.SelectedItemSearchResponse;
+            if (selectedItem is null)
+            {
+                _errorMessage = "No item selected";
+                return;
+            }
+
+            if (_amountBind is null or <= 0)
+            {
+                _errorMessage = "No amount entered";
+                return;
+            }
+
+            if (_priceBind is null or <= 0)
+            {
+                _errorMessage = "No price entered";
+                return;
+            }
+
+            var unitPrice = CurrencyHelper.CurrencyToSmallestUnit(List.Currency, _priceBind.Value);
+            if (_currentAction == Actions.Buy)
+            {
+                var buyItem = await ItemTrackerApiService.BuyItem(
+                    accessToken,
+                    List.Url,
+                    selectedItem.Id,
+                    _amountBind.Value,
+                    unitPrice
+                );
+                if (buyItem.IsError)
+                {
+                    _errorMessage = $"{buyItem.FirstError.Description}";
+                    return;
+                }
+
+                ToastService.Info($"Added buy entry for item \"{selectedItem.Name}\" Amount: {_amountBind.Value} Price for one: {unitPrice}");
+            }
+            else if (_currentAction == Actions.Sell)
+            {
+                var itemInList = List.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
+                if (itemInList is null)
+                {
+                    _errorMessage = "You can't sell an item you dont have";
+                    return;
+                }
+
+                if (_amountBind > itemInList.ItemCount)
+                {
+                    _errorMessage = "You can't sell more items than the list contains";
+                    return;
+                }
+
+                var sellItem = await ItemTrackerApiService.SellItem(
+                    accessToken,
+                    List.Url,
+                    selectedItem.Id,
+                    _amountBind.Value,
+                    unitPrice
+                );
+                if (sellItem.IsError)
+                {
+                    _errorMessage = $"{sellItem.FirstError.Description}";
+                    return;
+                }
+
+                ToastService.Info($"Added sell entry for item \"{selectedItem.Name}\" Amount: {_amountBind.Value} Price for one: {unitPrice}");
+            }
+            else
+            {
+                _errorMessage = $"{_currentAction} is not valid action to add";
+            }
+
+            await ModalRef.HideAsync();
+            _afterItemActionAddedAction.ThrowIfNull();
+            await _afterItemActionAddedAction.Invoke();
         }
-        else if (_currentAction == Actions.Sell)
+        catch (Exception e)
         {
-            var itemInList = List.Items.FirstOrDefault(item => item.ItemId == selectedItem.Id);
-            if (itemInList is null)
-            {
-                _errorMessage = "You can't sell an item you dont have";
-                return;
-            }
-
-            if (_amountBind > itemInList.ItemCount)
-            {
-                _errorMessage = "You can't sell more items than the list contains";
-                return;
-            }
-
-            var sellItem = await ItemTrackerApiService.SellItem(
-                accessToken,
-                List.Url,
-                selectedItem.Id,
-                _amountBind.Value,
-                unitPrice
-            );
-            if (sellItem.IsError)
-            {
-                _errorMessage = $"{sellItem.FirstError.Description}";
-                return;
-            }
-
-            ToastService.Info($"Added sell entry for item \"{selectedItem.Name}\" Amount: {_amountBind.Value} Price for one: {unitPrice}");
+            Console.WriteLine(e);
         }
-        else
-        {
-            _errorMessage = $"{_currentAction} is not valid action to add";
-        }
-
-        await ModalRef.HideAsync();
-        ItemActionAdded?.Invoke(this, EventArgs.Empty);
     }
 
 }

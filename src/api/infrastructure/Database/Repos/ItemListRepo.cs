@@ -185,7 +185,7 @@ public class ItemListRepo
 
     public Task<ItemListItemActionDbModel> GetItemActionById(long actionId)
     {
-        return _dbContext.ItemActions.FirstAsync(action => action.Id == actionId);
+        return _dbContext.ItemActions.Include(action => action.List).FirstAsync(action => action.Id == actionId);
     }
 
     public async Task NewSnapshot(ItemListDbModel list, ItemPriceRefreshDbModel priceRefresh)
