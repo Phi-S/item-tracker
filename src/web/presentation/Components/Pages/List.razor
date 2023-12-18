@@ -1,6 +1,5 @@
 ﻿@page "/list/{ListUrl}"
-@using shared.Currencies
-@using presentation.BlazorExtensions
+@using presentation.Helper
 @inherits ListRazor
 
 <ErrorComponent @ref="ErrorComponentRef">
@@ -16,18 +15,20 @@
         <AddItemActionModal @ref="AddItemActionModalRef" List="List"></AddItemActionModal>
         <ShowItemActionsModal @ref="ShowItemActionsModalRef" List="List"></ShowItemActionsModal>
 
-        <table class="table table-dark table-striped w-100">
+        <table class="table table-dark table-striped">
             <thead class="text-center">
-            <tr>
-                <th scope="col"></th>
-                <th scope="col">Item</th>
-                <th scope="col">Amount</th>
-                <th scope="col">Buy price</th>
-                <th scope="col">Steam price</th>
-                <th scope="col">Performance</th>
+            <tr class="d-table-row">
                 @if (IsOwnList)
                 {
                     <th scope="col"></th>
+                }
+                <th scope="col" colspan="1">Item</th>
+                <th scope="col">Amount</th>
+                <th scope="col" class="text-nowrap">Buy price</th>
+                <th scope="col" class="d-none d-md-table-cell">Steam</th>
+                <th scope="col" class="d-none d-md-table-cell">Buff163</th>
+                @if (IsOwnList)
+                {
                     <th scope="col">
                         <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">Add Buy entry</button>
                     </th>
@@ -38,43 +39,81 @@
             @foreach (var item in List.Items.Where(item => item.ItemCount > 0))
             {
                 <tr class="pb-1 text-center align-middle">
-                    <td class="col-1">
-                        <img class="" src="@item.ItemImage" alt="" style="object-fit: contain; height: 3rem"/>
-                    </td>
-                    <td class="col-2">
-                        <span>@item.ItemName</span>
-                    </td>
-                    <td class="col-1">
-                        <span>@item.ItemCount</span>
-                    </td>
-                    <td class="col-1">
-                        <Tooltip Title="Price for one item">
-                            @CurrencyHelper.FormatCurrency(List.Currency, item.AverageBuyPrice) /1
-                        </Tooltip>
-                        <br/>
-                        <Tooltip Title="Total price">
-                            <span>@CurrencyHelper.FormatCurrency(List.Currency, item.ItemCount * item.AverageBuyPrice)</span>
-                        </Tooltip>
-                    </td>
-                    <td class="col-1">
-                        <Tooltip Title="Price for one item">
-                            <span>@CurrencyHelper.FormatCurrency(List.Currency, item.SteamSellPrice) /1</span>
-                        </Tooltip>
-                        <br/>
-                        <Tooltip Title="Total price">
-                            <span>@CurrencyHelper.FormatCurrency(List.Currency, (item.SteamSellPrice) * item.ItemCount)</span>
-                        </Tooltip>
-                    </td>
-                    <td class="col-1 text-nowrap">
-                        <span>@item.GetPerformancePercentString()%</span>
-                        <span>@CurrencyHelper.FormatCurrency(List.Currency, item.GetPerformanceValueString())</span>
-                    </td>
                     @if (IsOwnList)
                     {
                         <td class="col-1">
                             <button class="btn bi bi-chevron-down" @onclick="() => ShowItemActions(item)"></button>
                         </td>
-                        <td class="col-2">
+                    }
+                    <td class="col-3">
+                        <img src="@item.ItemImage" alt="" style="object-fit: contain; height: 3rem;"/>
+                        <span class="text-nowrap">@item.ItemName</span>
+                    </td>
+                    <td class="col-1">
+                        <span>@item.ItemCount</span>
+                    </td>
+                    <td class="col-1">
+                        <Tooltip Title="Buy for one item">
+                            <span class="text-nowrap">@FormatHelper.FormatCurrency(List.Currency, item.SteamSellPriceForOne) /1</span>
+                        </Tooltip>
+                        <Tooltip Title="Total buy price">
+                            <span>@FormatHelper.FormatCurrency(List.Currency, (item.SteamSellPriceForOne) * item.ItemCount)</span>
+                        </Tooltip>
+                    </td>
+
+                    <td class="col-2 d-none d-md-table-cell">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="row justify-content-center">
+                                    <Tooltip Title="Steam price for one item">
+                                        @FormatHelper.FormatCurrency(List.Currency, item.SteamSellPriceForOne) /1
+                                    </Tooltip>
+                                </div>
+                                <div class="row justify-content-center">
+                                    <Tooltip Title="Total steam price">
+                                        @FormatHelper.FormatCurrency(List.Currency, item.SteamSellPriceForOne * item.ItemCount)
+                                    </Tooltip>
+                                </div>
+                                <div class="row justify-content-center text-nowrap">
+                                    <div>
+                                        <Tooltip Title="Performance">
+                                            @FormatHelper.FormatPerformancePercent(item.SteamPerformancePercent)
+                                            /
+                                            @FormatHelper.FormatCurrency(List.Currency, item.SteamPerformanceValue)
+                                        </Tooltip>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="col-2 d-none d-md-table-cell">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="row justify-content-center">
+                                    <Tooltip Title="Buff163 price for one item">
+                                        @FormatHelper.FormatCurrency(List.Currency, item.Buff163SellPriceForOne) /1
+                                    </Tooltip>
+                                </div>
+                                <div class="row justify-content-center">
+                                    <Tooltip Title="Total buff163 price">
+                                        @FormatHelper.FormatCurrency(List.Currency, item.Buff163SellPriceForOne * item.ItemCount)
+                                    </Tooltip>
+                                </div>
+                                <div class="row justify-content-center text-nowrap">
+                                    <div>
+                                        <Tooltip Title="Performance">
+                                            @FormatHelper.FormatPerformancePercent(item.Buff163PerformancePercent)
+                                            /
+                                            @FormatHelper.FormatCurrency(List.Currency, item.Buff163PerformanceValue)
+                                        </Tooltip>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    @if (IsOwnList)
+                    {
+                        <td class="col-2 text-truncate">
                             <button class="btn btn-outline-danger w-100" @onclick="() => AddSellAction(item)">Add Sell entry</button>
                         </td>
                     }

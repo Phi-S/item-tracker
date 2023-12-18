@@ -1,6 +1,7 @@
 ﻿@using BlazorBootstrap
 @using presentation.Authentication
 @using presentation.BlazorExtensions
+@using presentation.Helper
 @using presentation.ItemTrackerApi
 @using shared.Currencies
 @using shared.Models.ListResponse
@@ -30,7 +31,7 @@
                             }
                         </td>
                         <td class="col-2">@action.Amount</td>
-                        <td class="col-2">@CurrencyHelper.FormatCurrency(List.Currency, action.Price)</td>
+                        <td class="col-2">@FormatHelper.FormatCurrency(List.Currency, action.Price)</td>
                         <td class="col-2">
                             <button class="btn bi bi-x-lg" @onclick="() => DeleteItemAction(action)"></button>
                         </td>
@@ -78,7 +79,7 @@
         try
         {
             var buySellString = action.Action.Equals("B") ? "Buy" : "Sell";
-            var actionString = $"{buySellString} entry: {action.CreatedUtc.AddHours(_browserDateTimeOffset)} | Amount: {action.Amount} |  Price: {CurrencyHelper.FormatCurrency(List.Currency, action.Price)}";
+            var actionString = $"{buySellString} entry: {action.CreatedUtc.AddHours(_browserDateTimeOffset)} | Amount: {action.Amount} |  Price: {FormatHelper.FormatCurrency(List.Currency, action.Price)}";
             var confirmation = await ConfirmDialogRef.Show(
                 actionString,
                 "If you delete an entry it will no longer be used to calculate any dependent values (Average buy price or Profit).",

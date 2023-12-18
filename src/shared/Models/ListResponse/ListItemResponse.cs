@@ -9,18 +9,25 @@ public record ListItemResponse(
     string ItemName,
     [property: JsonRequired, JsonPropertyName("item_image")]
     string ItemImage,
-    [property: JsonRequired, JsonPropertyName("invested_capital")]
-    long InvestedCapital,
-    // CurrentAmountInvested == buyAmount - sellAmount
     [property: JsonRequired, JsonPropertyName("item_count")]
     int ItemCount,
+    [property: JsonRequired, JsonPropertyName("invested_capital")]
+    long InvestedCapital,
     // CurrentAverageBuyPrice == The average buy price since the last time the item amount was 0
-    [property: JsonRequired, JsonPropertyName("average_buy_price")]
-    long AverageBuyPrice,
-    [property: JsonRequired, JsonPropertyName("steam_sell_price")]
-    long? SteamSellPrice,
-    [property: JsonRequired, JsonPropertyName("buff163_sell_price")]
-    long? Buff163SellPrice,
+    [property: JsonRequired, JsonPropertyName("average_buy_price_for_one")]
+    long AverageBuyPriceForOne,
+    [property: JsonRequired, JsonPropertyName("steam_sell_price_for_one")]
+    long? SteamSellPriceForOne,
+    [property: JsonRequired, JsonPropertyName("buff163_sell_price_for_one")]
+    long? Buff163SellPriceForOne,
+    [property: JsonRequired, JsonPropertyName("steam_performance_percent")]
+    double? SteamPerformancePercent,
+    [property: JsonRequired, JsonPropertyName("buff163_performance_percent")]
+    double? Buff163PerformancePercent,
+    [property: JsonRequired, JsonPropertyName("steam_performance_value")]
+    long SteamPerformanceValue,
+    [property: JsonRequired, JsonPropertyName("buff163_performance_value")]
+    long Buff163PerformanceValue,
     [property: JsonRequired, JsonPropertyName("sales_value")]
     long SalesValue,
     [property: JsonRequired, JsonPropertyName("profit")]

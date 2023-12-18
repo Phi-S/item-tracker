@@ -11,13 +11,20 @@ public static class ItemListMapper
 {
     #region MapListItemresponses
 
-    private static Task<List<ListItemResponse>> MapListItemResponses(
+    private static Task<ListResponse> MapListItemResponses(
         ItemListDbModel list,
         List<ItemListItemActionDbModel> itemActions,
         ItemsService itemsService,
         ItemPriceRefreshDbModel priceRefresh,
         List<ItemPriceDbModel> prices)
     {
+        long totalInvestedCapital = 0;
+        var totalItemCount = 0;
+        long totalSteamPrice = 0;
+        long totalBuff163Price = 0;
+        long totalSteamPerformanceValue = 0;
+        long totalBuff163PerformanceValue = 0;
+
         var result = new List<ListItemResponse>();
         foreach (var itemActionsGroupByItemId in itemActions.GroupBy(action => action.ItemId))
         {
@@ -35,10 +42,37 @@ public static class ItemListMapper
                 priceRefresh,
                 prices
             );
+            totalInvestedCapital += item.InvestedCapital;
+            totalItemCount += item.ItemCount;
+            totalSteamPrice += (item.SteamSellPriceForOne ?? 0) * item.ItemCount;
+            totalBuff163Price += (item.Buff163SellPriceForOne ?? 0) * item.ItemCount;
+            totalSteamPerformanceValue += item.SteamPerformanceValue;
+            totalBuff163PerformanceValue += item.Buff163PerformanceValue;
             result.Add(item);
         }
+        
+        var totalSteamPerformancePercent = GetPerformancePercent(totalSteamPrice, totalInvestedCapital);
+        var totalBuff163PerformancePercent = GetPerformancePercent(totalBuff163Price, totalInvestedCapital);
 
-        return Task.FromResult(result);
+        var listResponse = new ListResponse(
+            list.Name,
+            list.Description,
+            list.Url,
+            list.Currency,
+            list.Public,
+            list.UserId,
+            totalItemCount,
+            totalInvestedCapital,
+            totalSteamPrice,
+            totalBuff163Price,
+            totalSteamPerformancePercent,
+            totalBuff163PerformancePercent,
+            totalSteamPerformanceValue,
+            totalBuff163PerformanceValue,
+            result,
+            []
+        );
+        return Task.FromResult(listResponse);
     }
 
     public static ListItemResponse MapListItemResponse(
@@ -52,11 +86,6 @@ public static class ItemListMapper
             price.ItemPriceRefresh.Id == priceRefresh.Id && price.ItemId == item.Id);
         long? steamSellPrice;
         long? buff163SellPrice;
-
-        if (CurrencyHelper.IsCurrencyValid(list.Currency) == false)
-        {
-            throw new UnknownCurrencyException(list.Currency);
-        }
 
         if (list.Currency.Equals(CurrenciesConstants.USD))
         {
@@ -83,7 +112,7 @@ public static class ItemListMapper
         var buyPrices = new List<long>();
         long salesValue = 0;
         long profit = 0;
-        var amountInvested = 0;
+        var itemCount = 0;
         var gotSales = false;
         foreach (var itemAction in itemActionsForItem.OrderBy(action => action.CreatedUtc))
         {
@@ -118,13 +147,13 @@ public static class ItemListMapper
                 // buy 5 for 1; avg buy price 1;
                 // sell 5 fox x; avg buy price 0;
                 // buy 5 for 2; avg buy price == 2
-                if (amountInvested == 0)
+                if (itemCount == 0)
                 {
                     buyPrices.Clear();
                 }
 
                 buyPrices.AddRange(Enumerable.Repeat(actionResponse.Price, actionResponse.Amount));
-                amountInvested += actionResponse.Amount;
+                itemCount += actionResponse.Amount;
             }
             else if (actionResponse.Action.Equals("S"))
             {
@@ -132,27 +161,48 @@ public static class ItemListMapper
                 salesValue += actionResponse.Amount * actionResponse.Price;
                 var tempAverageBuyPrice = (long)Math.Round(buyPrices.Average(), 0);
                 profit += (actionResponse.Price - tempAverageBuyPrice) * actionResponse.Amount;
-                amountInvested -= actionResponse.Amount;
+                itemCount -= actionResponse.Amount;
             }
         }
 
         var averageBuyPrice = buyPrices.Count == 0 ? 0 : (long)Math.Round(buyPrices.Average(), 0);
-        var capitalInvested = gotSales ? averageBuyPrice * amountInvested : buyPrices.Sum();
+        var capitalInvested = gotSales ? averageBuyPrice * itemCount : buyPrices.Sum();
+        
+        var steamPerformancePercent = GetPerformancePercent(steamSellPrice, averageBuyPrice);
+        var buff163PerformancePercent = GetPerformancePercent(buff163SellPrice, averageBuyPrice);
+
+        var steamPerformanceValue = GetPerformanceValue(steamSellPrice, averageBuyPrice, itemCount);
+        var buff163PerformanceValue = GetPerformanceValue(buff163SellPrice, averageBuyPrice, itemCount);
 
         var listItemResponse = new ListItemResponse(
             item.Id,
             item.Name,
             item.Image,
+            itemCount,
             capitalInvested,
-            amountInvested,
             averageBuyPrice,
             steamSellPrice,
             buff163SellPrice,
+            steamPerformancePercent,
+            buff163PerformancePercent,
+            steamPerformanceValue,
+            buff163PerformanceValue,
             salesValue,
             profit,
             itemActionResponses
         );
         return listItemResponse;
+    }
+
+    private static double? GetPerformancePercent(long? currentPrice, long buyPrice)
+    {
+        var performance = Math.Round((double)(currentPrice ?? 0) / buyPrice * 100 - 100, 2);
+        return double.IsInfinity(performance) ? null : performance;
+    }
+
+    private static long GetPerformanceValue(long? currentPrice, long buyPrice, int itemCount)
+    {
+        return ((currentPrice ?? 0) - buyPrice) * itemCount;
     }
 
     #endregion
@@ -316,18 +366,8 @@ public static class ItemListMapper
             return listSnapshotResponses.FirstError;
         }
 
-        await mapListItemResponsesTask;
-
-        var listResponse = new ListResponse(
-            itemListDbModel.Name,
-            itemListDbModel.Description,
-            itemListDbModel.Url,
-            itemListDbModel.Currency,
-            itemListDbModel.Public,
-            itemListDbModel.UserId,
-            mapListItemResponsesTask.Result,
-            listSnapshotResponses.Value);
-
+        var listResponse = await mapListItemResponsesTask;
+        listResponse.Snapshots.AddRange(listSnapshotResponses.Value);
         return listResponse;
     }
 }

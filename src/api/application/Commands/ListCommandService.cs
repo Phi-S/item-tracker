@@ -73,7 +73,8 @@ public class ListCommandService
             return Error.Unauthorized(description: "UserId not found");
         }
 
-        var isCurrencyValid = CurrencyHelper.IsCurrencyValid(newListModel.Currency);
+        var isCurrencyValid =
+            CurrenciesConstants.ValidCurrencies.Any(currency => currency.Equals(newListModel.Currency));
         if (isCurrencyValid == false)
         {
             return Error.Failure(description: $"Currency \"{newListModel.Currency}\" is not a valid currency");

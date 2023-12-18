@@ -113,11 +113,11 @@ public class ItemListMapperTest
         Assert.Equal(item.Image, listItemResponse.ItemImage);
         Assert.Equal(33, listItemResponse.InvestedCapital);
         Assert.Equal(11, listItemResponse.ItemCount);
-        Assert.Equal(3, listItemResponse.AverageBuyPrice);
+        Assert.Equal(3, listItemResponse.AverageBuyPriceForOne);
         Assert.Equal(200, listItemResponse.SalesValue);
         Assert.Equal(156, listItemResponse.Profit);
-        Assert.Equal(2, listItemResponse.SteamSellPrice);
-        Assert.Equal(4, listItemResponse.Buff163SellPrice);
+        Assert.Equal(2, listItemResponse.SteamSellPriceForOne);
+        Assert.Equal(4, listItemResponse.Buff163SellPriceForOne);
         Assert.Equal(itemAction.Count, listItemResponse.Actions.Count);
         _outputHelper.WriteLine(listItemResponse.ToString());
     }

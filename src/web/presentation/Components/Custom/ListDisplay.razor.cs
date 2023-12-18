@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using presentation.Authentication;
 using presentation.BlazorExtensions;
+using presentation.Helper;
 using presentation.ItemTrackerApi;
-using shared.Currencies;
 using shared.Models.ListResponse;
 using Throw;
 
