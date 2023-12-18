@@ -7,44 +7,42 @@
 @using shared.Models.ListResponse
 @using Throw
 
-<Modal @ref="ModalRef" IsVerticallyCentered="true" HeaderCssClass="bg-dark">
-    <HeaderTemplate>
-        <div class="text-center w-100" style="color: white">@_item?.ItemName entries</div>
-    </HeaderTemplate>
-    <BodyTemplate>
-        <table class="table table-striped w-100 text-center align-middle">
-            <tbody>
-            @if (_item is not null)
-            {
-                foreach (var action in _item.Actions)
+
+<table class="table table-sm table-stripe text-center align-middle @_hideString">
+    <thead>
+    <tr>
+        <th>Date</th>
+        <th>Buy or Sell</th>
+        <th>Amount</th>
+        <th>Buy price for one</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var action in Item.Actions.OrderByDescending(action => action.CreatedUtc))
+    {
+        <tr>
+            <td class="col-4">@action.CreatedUtc.AddHours(_browserDateTimeOffset)</td>
+            <td class="col-2">
+                @if (action.Action.Equals("B"))
                 {
-                    <tr class="">
-                        <td class="col-4">@action.CreatedUtc.AddHours(_browserDateTimeOffset)</td>
-                        <td class="col-2">
-                            @if (action.Action.Equals("B"))
-                            {
-                                <span style="color: green">Buy</span>
-                            }
-                            else if (action.Action.Equals("S"))
-                            {
-                                <span style="color: red">Sell</span>
-                            }
-                        </td>
-                        <td class="col-2">@action.Amount</td>
-                        <td class="col-2">@FormatHelper.FormatCurrency(List.Currency, action.Price)</td>
-                        <td class="col-2">
-                            <button class="btn bi bi-x-lg" @onclick="() => DeleteItemAction(action)"></button>
-                        </td>
-                    </tr>
+                    <span style="color: green">Buy</span>
                 }
-            }
-            </tbody>
-        </table>
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Secondary" @onclick="ModalRef.HideAsync">Close</Button>
-    </FooterTemplate>
-</Modal>
+                else if (action.Action.Equals("S"))
+                {
+                    <span style="color: red">Sell</span>
+                }
+            </td>
+            <td class="col-2">@action.Amount</td>
+            <td class="col-2">@FormatHelper.FormatCurrency(Currency, action.Price)</td>
+            <td class="col-2">
+                <button class="btn bi bi-x-lg" @onclick="() => DeleteItemAction(action)"></button>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
 <ConfirmDialog @ref="ConfirmDialogRef" Class="text-center"/>
 
 @code{
@@ -52,11 +50,11 @@
     [Inject] IJSRuntime JsRuntime { get; set; } = default!;
     [Inject] protected ToastService ToastService { get; set; } = default!;
     [Inject] ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
-    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
+    [Parameter] [EditorRequired] public string Currency { get; set; } = default!;
+    [Parameter] [EditorRequired] public ListItemResponse Item { get; set; } = default!;
 
-    private Modal ModalRef { get; set; } = default!;
+    private string _hideString = "visually-hidden";
     private ConfirmDialog ConfirmDialogRef { get; set; } = default!;
-    private ListItemResponse? _item = null;
     private Func<Task>? _afterDeleteItemActionAction;
 
     private int _browserDateTimeOffset = 0;
@@ -67,11 +65,10 @@
         await base.OnInitializedAsync();
     }
 
-    public Task Show(ListItemResponse item, Func<Task> afterDeleteItemActionAction)
+    public void Show(Func<Task> afterDeleteItemActionAction)
     {
-        _item = item;
+        _hideString = string.IsNullOrWhiteSpace(_hideString) ? "visually-hidden" : "";
         _afterDeleteItemActionAction = afterDeleteItemActionAction;
-        return ModalRef.ShowAsync();
     }
 
     private async Task DeleteItemAction(ListItemActionResponse action)
@@ -79,7 +76,7 @@
         try
         {
             var buySellString = action.Action.Equals("B") ? "Buy" : "Sell";
-            var actionString = $"{buySellString} entry: {action.CreatedUtc.AddHours(_browserDateTimeOffset)} | Amount: {action.Amount} |  Price: {FormatHelper.FormatCurrency(List.Currency, action.Price)}";
+            var actionString = $"{buySellString} entry: {action.CreatedUtc.AddHours(_browserDateTimeOffset)} | Amount: {action.Amount} |  Price: {FormatHelper.FormatCurrency(Currency, action.Price)}";
             var confirmation = await ConfirmDialogRef.Show(
                 actionString,
                 "If you delete an entry it will no longer be used to calculate any dependent values (Average buy price or Profit).",
@@ -96,7 +93,6 @@
                 else
                 {
                     ToastService.Info($"Action deleted \n {actionString}");
-                    await ModalRef.HideAsync();
                     _afterDeleteItemActionAction.ThrowIfNull();
                     await _afterDeleteItemActionAction.Invoke();
                 }

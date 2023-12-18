@@ -23,7 +23,10 @@ public class ItemSearchComponentRazor : ComponentBase
         set
         {
             _searchInputText = value;
-            StartBackgroundTask();
+            if (LockInput == false)
+            {
+                StartBackgroundTask();
+            }
         }
     }
 

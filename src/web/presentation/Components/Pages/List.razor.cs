@@ -15,8 +15,9 @@ public class ListRazor : ComponentBase
     protected ErrorComponent ErrorComponentRef { get; set; } = default!;
     protected ListDisplay ListDisplayRef { get; set; } = default!;
     protected AddItemActionModal AddItemActionModalRef { get; set; } = default!;
-    protected ShowItemActionsModal ShowItemActionsModalRef { get; set; } = default!;
 
+    protected readonly Dictionary<long, ShowItemActions> ShowItemActionsRefMap = new();
+    
     protected ListResponse? List;
     protected bool IsOwnList;
 
@@ -91,11 +92,12 @@ public class ListRazor : ComponentBase
         }
     }
 
-    protected async Task ShowItemActions(ListItemResponse item)
+    protected void ShowItemActions(ListItemResponse item)
     {
         try
         {
-            await ShowItemActionsModalRef.Show(item, RefreshList);
+            ShowItemActionsRefMap[item.ItemId].Show(RefreshList);
+            //await ShowItemActionsModalRef.Show(item, RefreshList);
         }
         catch (Exception e)
         {

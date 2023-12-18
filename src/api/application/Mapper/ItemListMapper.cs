@@ -56,8 +56,18 @@ public static class ItemListMapper
                 totalBuff163Price += item.Buff163SellPriceForOne.Value * item.ItemCount;
             }
 
-            totalSteamPerformanceValue += item.SteamPerformanceValue;
-            totalBuff163PerformanceValue += item.Buff163PerformanceValue;
+            if (item.SteamPerformanceValue is not null)
+            {
+                totalSteamPerformanceValue ??= 0;
+                totalSteamPerformanceValue += item.SteamPerformanceValue;
+            }
+
+            if (item.Buff163PerformanceValue is not null)
+            {
+                totalBuff163PerformanceValue ??= 0;
+                totalBuff163PerformanceValue += item.Buff163PerformanceValue;
+            }
+
             result.Add(item);
         }
 
@@ -210,6 +220,7 @@ public static class ItemListMapper
         {
             return null;
         }
+
         var performance = Math.Round((double)(currentPrice ?? 0) / buyPrice * 100 - 100, 2);
         return double.IsInfinity(performance) ? null : performance;
     }

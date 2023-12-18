@@ -7,60 +7,54 @@
 
 <ConfirmDialog @ref="ConfirmDialogRef"/>
 
-<div class="row h-100 w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden">
+<div class="row w-100 border border-2 rounded-2 m-0 p-0 flex-nowrap overflow-hidden" style="height: 200px">
     <button class="col-3 btn border-end p-0 m-0 overflow-hidden" @onclick="() => NavigationManager.NavigateToList(List.Url)">
-        <div class="row border-bottom" style="height: 20%">
+        <div class="row border-bottom" style="height: 16%">
             <div class="col-12 text-decoration-underline d-flex justify-content-center align-items-center">
                 @List.Name
             </div>
         </div>
-        <div style="height: 80%">
+        <div style="height: 84%">
             <div class="d-block d-md-none h-100">
-                <div>
-                    <div class="row p-0 m-0 h-50 border-bottom d-flex justify-content-center align-items-center">
+
+                <div class="row p-0 m-0 h-50 border-bottom d-flex justify-content-center align-items-center">
+                    <div class="row d-flex justify-content-center align-items-center text-decoration-underline">
+                        Items:
+                    </div>
+                    <div class="row d-flex justify-content-center align-items-center">
+                        @List.ItemCount
+                    </div>
+                    <Tooltip Title="Invested capital">
                         <div class="row d-flex justify-content-center align-items-center text-decoration-underline">
-                            Items:
+                            Invested:
                         </div>
                         <div class="row d-flex justify-content-center align-items-center">
-                            @List.ItemCount
+                            @FormatHelper.FormatCurrency(List.Currency, List.InvestedCapital)
                         </div>
-                        <Tooltip Title="Invested capital">
-                            <div class="row d-flex justify-content-center align-items-center text-decoration-underline">
-                                Invested:
-                            </div>
-                            <div class="row d-flex justify-content-center align-items-center">
-                                @FormatHelper.FormatCurrency(List.Currency, List.InvestedCapital)
+                    </Tooltip>
+                </div>
+                <div class="row p-0 m-0 h-50 d-flex justify-content-center align-items-center">
+                    <div class="row text-decoration-underline justify-content-center">
+                        Performance:
+                    </div>
+                    <div class="row p-0 m-0">
+                        <Tooltip Title="Steam performance" Class="m-0 p-0">
+                            <div class="text-center">
+                                S:
+                                @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
                             </div>
                         </Tooltip>
                     </div>
-                    <div class="row p-0 m-0 h-50 d-flex justify-content-center align-items-center text-nowrap">
-                        <div class="row text-decoration-underline d-flex justify-content-center align-items-center">
-                            Performance:
-                        </div>
-                        <Tooltip Title="Steam performance">
-                            <div class="row p-0 m-0">
-                                <div class="col-4 m-0 p-0 text-end">
-                                    S:
-                                </div>
-                                <div class="col-8 m-0 p-0 text-center">
-                                    @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
-                                </div>
-                            </div>
-                        </Tooltip>
-                        <Tooltip Title="Buff163 performance">
-                            <div class="row p-0 m-0">
-                                <div class="col-4 m-0 p-0 text-end">
-                                    B:
-                                </div>
-                                <div class="col-8 m-0 p-0 text-center">
-                                    @FormatHelper.FormatPerformancePercent(List.Buff163PerformancePercent)
-                                </div>
+                    <div class="row p-0 m-0">
+                        <Tooltip Title="Buff163 performance" Class="m-0 p-0">
+                            <div class="text-center">
+                                B:
+                                @FormatHelper.FormatPerformancePercent(List.Buff163PerformancePercent)
                             </div>
                         </Tooltip>
                     </div>
                 </div>
             </div>
-
             <div class="d-none d-md-block h-100">
                 <div class="row border-bottom h-50 m-0 p-0 w-100">
                     <div class="row d-flex justify-content-center align-items-center p-0 m-0 border-bottom">
@@ -74,33 +68,40 @@
                 </div>
 
                 <div class="row h-50 m-0 p-0">
-                    <div class="col-12 border-end d-flex justify-content-center align-items-center">
-                        <div>
+                    <div class="col-12 border-end d-flex justify-content-center align-items-center m-0 p-0">
+                        <div class="w-100">
                             <div class="text-decoration-underline">
                                 Performance:
                             </div>
-                            <div class="row d-flex justify-content-center align-items-center m-0 p-0">
-                                <div class="col-4">
-                                    Steam:
-                                </div>
-                                <div class="col-8">
+                            <div class="row m-0 p-0">
+                                <div class="col-6 m-0 p-0 border-end">
+                                    <div class="row m-0 p-0 justify-content-center">
+                                        Steam:
+                                    </div>
                                     <Tooltip Title="in percent">
-                                        @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent) /
+                                        <div class="row m-0 p-0 justify-content-center">
+                                            @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
+                                        </div>
                                     </Tooltip>
                                     <Tooltip Title="total gain/loss">
-                                        @FormatHelper.FormatCurrency(List.Currency, List.SteamPerformanceValue, true)
+                                        <div class="row m-0 p-0 justify-content-center">
+                                            @FormatHelper.FormatCurrency(List.Currency, List.SteamPerformanceValue, true)
+                                        </div>
                                     </Tooltip>
                                 </div>
-                                <div class="col-4">
-                                    Buff163:
-                                </div>
-                                <div class="col-8">
+                                <div class="col-6 m-0 p-0">
+                                    <div class="row m-0 p-0 justify-content-center">
+                                        Buff163:
+                                    </div>
                                     <Tooltip Title="in percent">
-                                        @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
+                                        <div class="row m-0 p-0 justify-content-center">
+                                            @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
+                                        </div>
                                     </Tooltip>
-                                    /
                                     <Tooltip Title="total gain/loss">
-                                        @FormatHelper.FormatCurrency(List.Currency, List.SteamPerformanceValue, true)
+                                        <div class="row m-0 p-0 justify-content-center">
+                                            @FormatHelper.FormatCurrency(List.Currency, List.SteamPerformanceValue, true)
+                                        </div>
                                     </Tooltip>
                                 </div>
                             </div>

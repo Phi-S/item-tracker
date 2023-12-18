@@ -9,11 +9,10 @@
     }
     else
     {
-        <div class="pb-2" style="height: 15rem">
+        <div class="pb-2">
             <ListDisplay @ref="ListDisplayRef" DisplayGoToListButton="false" List="List"/>
         </div>
         <AddItemActionModal @ref="AddItemActionModalRef" List="List"></AddItemActionModal>
-        <ShowItemActionsModal @ref="ShowItemActionsModalRef" List="List"></ShowItemActionsModal>
 
         <table class="table table-dark table-striped">
             <thead class="text-center">
@@ -132,6 +131,12 @@
                             </Tooltip>
                         </td>
                     }
+                </tr>
+                <tr >
+                    <td colspan="7" class="px-5">
+                        <ShowItemActions @ref="ShowItemActionsRefMap[item.ItemId]" Currency="@List.Currency" Item="item">
+                        </ShowItemActions>
+                    </td>
                 </tr>
             }
             </tbody>
