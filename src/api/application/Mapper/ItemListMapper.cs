@@ -20,10 +20,10 @@ public static class ItemListMapper
     {
         long totalInvestedCapital = 0;
         var totalItemCount = 0;
-        long totalSteamPrice = 0;
-        long totalBuff163Price = 0;
-        long totalSteamPerformanceValue = 0;
-        long totalBuff163PerformanceValue = 0;
+        long? totalSteamPrice = null;
+        long? totalBuff163Price = null;
+        long? totalSteamPerformanceValue = null;
+        long? totalBuff163PerformanceValue = null;
 
         var result = new List<ListItemResponse>();
         foreach (var itemActionsGroupByItemId in itemActions.GroupBy(action => action.ItemId))
@@ -44,13 +44,23 @@ public static class ItemListMapper
             );
             totalInvestedCapital += item.InvestedCapital;
             totalItemCount += item.ItemCount;
-            totalSteamPrice += (item.SteamSellPriceForOne ?? 0) * item.ItemCount;
-            totalBuff163Price += (item.Buff163SellPriceForOne ?? 0) * item.ItemCount;
+            if (item.SteamSellPriceForOne is not null)
+            {
+                totalSteamPrice ??= 0;
+                totalSteamPrice += item.SteamSellPriceForOne.Value * item.ItemCount;
+            }
+
+            if (item.Buff163SellPriceForOne is not null)
+            {
+                totalBuff163Price ??= 0;
+                totalBuff163Price += item.Buff163SellPriceForOne.Value * item.ItemCount;
+            }
+
             totalSteamPerformanceValue += item.SteamPerformanceValue;
             totalBuff163PerformanceValue += item.Buff163PerformanceValue;
             result.Add(item);
         }
-        
+
         var totalSteamPerformancePercent = GetPerformancePercent(totalSteamPrice, totalInvestedCapital);
         var totalBuff163PerformancePercent = GetPerformancePercent(totalBuff163Price, totalInvestedCapital);
 
@@ -167,7 +177,7 @@ public static class ItemListMapper
 
         var averageBuyPrice = buyPrices.Count == 0 ? 0 : (long)Math.Round(buyPrices.Average(), 0);
         var capitalInvested = gotSales ? averageBuyPrice * itemCount : buyPrices.Sum();
-        
+
         var steamPerformancePercent = GetPerformancePercent(steamSellPrice, averageBuyPrice);
         var buff163PerformancePercent = GetPerformancePercent(buff163SellPrice, averageBuyPrice);
 
@@ -196,13 +206,17 @@ public static class ItemListMapper
 
     private static double? GetPerformancePercent(long? currentPrice, long buyPrice)
     {
+        if (currentPrice is null)
+        {
+            return null;
+        }
         var performance = Math.Round((double)(currentPrice ?? 0) / buyPrice * 100 - 100, 2);
         return double.IsInfinity(performance) ? null : performance;
     }
 
-    private static long GetPerformanceValue(long? currentPrice, long buyPrice, int itemCount)
+    private static long? GetPerformanceValue(long? currentPrice, long buyPrice, int itemCount)
     {
-        return ((currentPrice ?? 0) - buyPrice) * itemCount;
+        return (currentPrice - buyPrice) * itemCount;
     }
 
     #endregion

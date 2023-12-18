@@ -1,3 +1,4 @@
+using System.Globalization;
 using shared.Currencies;
 
 namespace presentation.Helper;
@@ -14,13 +15,12 @@ public static class FormatHelper
         return performance > 0 ? $"+{performance}%" : $"{performance}%";
     }
 
-    public static string FormatCurrency(string currency, long? value, bool indicatePositiveValue = false) =>
-        FormatCurrency(currency, value ?? 0);
-
-    public static string FormatCurrency(string currency, long value, bool indicatePositiveValue = false)
+    public static string FormatCurrency(string currency, long? value, bool indicatePositiveValue = false)
     {
-        var valueAsDouble = CurrencyHelper.ToDouble(currency, value);
-        var positivePrefix = indicatePositiveValue && valueAsDouble > 0 ? "+" : "";
+        var positivePrefix = indicatePositiveValue && value > 0 ? "+" : "";
+        var valueAsDouble = value is null
+            ? "---"
+            : CurrencyHelper.ToDouble(currency, value.Value).ToString(CultureInfo.InvariantCulture);
         if (currency.Equals("EUR"))
         {
             return $"{positivePrefix}{valueAsDouble}€";

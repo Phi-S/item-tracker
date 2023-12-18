@@ -25,9 +25,9 @@ public record ListItemResponse(
     [property: JsonRequired, JsonPropertyName("buff163_performance_percent")]
     double? Buff163PerformancePercent,
     [property: JsonRequired, JsonPropertyName("steam_performance_value")]
-    long SteamPerformanceValue,
+    long? SteamPerformanceValue,
     [property: JsonRequired, JsonPropertyName("buff163_performance_value")]
-    long Buff163PerformanceValue,
+    long? Buff163PerformanceValue,
     [property: JsonRequired, JsonPropertyName("sales_value")]
     long SalesValue,
     [property: JsonRequired, JsonPropertyName("profit")]

@@ -17,12 +17,12 @@
 
         <table class="table table-dark table-striped">
             <thead class="text-center">
-            <tr class="d-table-row">
+            <tr>
                 @if (IsOwnList)
                 {
                     <th scope="col"></th>
                 }
-                <th scope="col" colspan="1">Item</th>
+                <th scope="col">Item</th>
                 <th scope="col">Amount</th>
                 <th scope="col" class="text-nowrap">Buy price</th>
                 <th scope="col" class="d-none d-md-table-cell">Steam</th>
@@ -30,7 +30,9 @@
                 @if (IsOwnList)
                 {
                     <th scope="col">
-                        <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">Add Buy entry</button>
+                        <Tooltip Title="Add buy entry">
+                            <button class="btn btn-outline-success w-100" @onclick="AddBuyAction">+</button>
+                        </Tooltip>
                     </th>
                 }
             </tr>
@@ -47,18 +49,27 @@
                     }
                     <td class="col-3">
                         <img src="@item.ItemImage" alt="" style="object-fit: contain; height: 3rem;"/>
-                        <span class="text-nowrap">@item.ItemName</span>
+                        <div class="">
+                            @item.ItemName
+                        </div>
                     </td>
                     <td class="col-1">
                         <span>@item.ItemCount</span>
                     </td>
-                    <td class="col-1">
-                        <Tooltip Title="Buy for one item">
-                            <span class="text-nowrap">@FormatHelper.FormatCurrency(List.Currency, item.SteamSellPriceForOne) /1</span>
-                        </Tooltip>
-                        <Tooltip Title="Total buy price">
-                            <span>@FormatHelper.FormatCurrency(List.Currency, (item.SteamSellPriceForOne) * item.ItemCount)</span>
-                        </Tooltip>
+                    <td class="col-2">
+                        <div class="">
+                            <Tooltip Title="Buy price for one item">
+                                <span class="text-nowrap">
+                                    @FormatHelper.FormatCurrency(List.Currency, item.AverageBuyPriceForOne) /1
+                                </span>
+                            </Tooltip>
+                            <br/>
+                            <Tooltip Title="Total buy price">
+                                <span>
+                                    @FormatHelper.FormatCurrency(List.Currency, item.AverageBuyPriceForOne * item.ItemCount)
+                                </span>
+                            </Tooltip>
+                        </div>
                     </td>
 
                     <td class="col-2 d-none d-md-table-cell">
@@ -113,8 +124,12 @@
                     </td>
                     @if (IsOwnList)
                     {
-                        <td class="col-2 text-truncate">
-                            <button class="btn btn-outline-danger w-100" @onclick="() => AddSellAction(item)">Add Sell entry</button>
+                        <td class="col-1 text-truncate d-table-cell">
+                            <Tooltip Title="Add sell entry">
+                                <button class="btn btn-outline-danger w-100 h-100" @onclick="() => AddSellAction(item)">
+                                    -
+                                </button>
+                            </Tooltip>
                         </td>
                     }
                 </tr>

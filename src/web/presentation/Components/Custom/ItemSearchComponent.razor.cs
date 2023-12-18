@@ -23,10 +23,7 @@ public class ItemSearchComponentRazor : ComponentBase
         set
         {
             _searchInputText = value;
-            if (SelectedItemSearchResponse is null)
-            {
-                StartBackgroundTask();
-            }
+            StartBackgroundTask();
         }
     }
 
@@ -97,7 +94,10 @@ public class ItemSearchComponentRazor : ComponentBase
 
     protected void OnSelect(ItemSearchResponse item)
     {
-        Reset(item);
+        Console.WriteLine($"OnSelect: {item}");
+        SelectedItemSearchResponse = item;
+        _searchInputText = SelectedItemSearchResponse is not null ? SelectedItemSearchResponse.Name : "";
+        StateHasChanged();
     }
 
     protected async Task HideSearchResponses()
@@ -109,7 +109,7 @@ public class ItemSearchComponentRazor : ComponentBase
 
     protected void ShowSearchResponses()
     {
-        if (ItemSearchResponses is null || LockInput)
+        if (LockInput)
         {
             HideSearchResponsesClass = "visually-hidden";
             return;
