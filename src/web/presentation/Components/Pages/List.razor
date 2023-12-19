@@ -21,6 +21,7 @@
                 {
                     <th scope="col"></th>
                 }
+                <th scope="col"></th>
                 <th scope="col">Item</th>
                 <th scope="col">Amount</th>
                 <th scope="col" class="text-nowrap">Buy price</th>
@@ -46,11 +47,11 @@
                             <button class="btn bi bi-chevron-down" @onclick="() => ShowItemActions(item)"></button>
                         </td>
                     }
-                    <td class="col-3">
+                    <td class="col-1">
                         <img src="@item.ItemImage" alt="" style="object-fit: contain; height: 3rem;"/>
-                        <div class="">
-                            @item.ItemName
-                        </div>
+                    </td>
+                    <td class="col-2">
+                        @item.ItemName
                     </td>
                     <td class="col-1">
                         <span>@item.ItemCount</span>
@@ -133,7 +134,7 @@
                     }
                 </tr>
                 <tr >
-                    <td colspan="7" class="px-5">
+                    <td colspan="7" class="px-5 border-0">
                         <ShowItemActions @ref="ShowItemActionsRefMap[item.ItemId]" Currency="@List.Currency" Item="item">
                         </ShowItemActions>
                     </td>
