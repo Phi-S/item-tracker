@@ -196,8 +196,8 @@ public class ListDisplayRazor : ComponentBase
         );
         if (confirmation)
         {
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            var makeListPublic = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, true);
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            var makeListPublic = await ItemTrackerApiService.UpdatePublic(userInfo?.AccessToken, List.Url, true);
             if (makeListPublic.IsError)
             {
                 ToastService.Error(
@@ -221,8 +221,8 @@ public class ListDisplayRazor : ComponentBase
         );
         if (confirmation)
         {
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            var makeListPrivate = await ItemTrackerApiService.UpdatePublic(accessToken, List.Url, false);
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            var makeListPrivate = await ItemTrackerApiService.UpdatePublic(userInfo?.AccessToken, List.Url, false);
             if (makeListPrivate.IsError)
             {
                 ToastService.Error(
@@ -245,8 +245,8 @@ public class ListDisplayRazor : ComponentBase
         );
         if (confirmation)
         {
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            var deleteList = await ItemTrackerApiService.Delete(accessToken, List.Url);
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            var deleteList = await ItemTrackerApiService.Delete(userInfo?.AccessToken, List.Url);
             if (deleteList.IsError)
             {
                 ToastService.Error($"Failed to delete list \"{List.Name}\". {deleteList.FirstError.Description}");

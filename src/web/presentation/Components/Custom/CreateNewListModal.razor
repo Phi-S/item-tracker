@@ -54,13 +54,8 @@
 
     private async Task CreateNewList()
     {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        if (string.IsNullOrWhiteSpace(accessToken))
-        {
-            throw new Exception("Access token is not set. This should never happen");
-        }
-
-        var newList = await ItemTrackerApiService.New(accessToken, _newListModel);
+        var userInfo = await AuthenticationStateProvider.UserInfo();
+        var newList = await ItemTrackerApiService.New(userInfo?.AccessToken, _newListModel);
         if (newList.IsError == false)
         {
             ToastService.Info($"New list \"{_newListModel.ListName}\" created");

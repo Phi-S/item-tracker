@@ -14,10 +14,12 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
     private const string ConfigurationAuthAuthorityKey = "Authority";
     private const string ConfigurationAuthClientIdKey = "ClientId";
 
-    private const string TokenKey = "token";
+    private const string UserInfoKey = "user_info";
     private const string RefreshTokenKey = "refresh_token";
 
-    public TokenResponseModel? Token { get; private set; }
+    public async Task<LocalStorageUserInfoModel?> UserInfo() => await
+        _localStorageService.GetItemAsync<LocalStorageUserInfoModel>(UserInfoKey);
+
     private readonly string _authority;
     private readonly string _clientId;
 
@@ -35,8 +37,10 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
     private readonly HttpClient _httpClient;
     private readonly ILocalStorageService _localStorageService;
 
-    public CognitoAuthenticationStateProvider(ILogger<CognitoAuthenticationStateProvider> logger,
-        IConfiguration configuration, HttpClient httpClient,
+    public CognitoAuthenticationStateProvider(
+        ILogger<CognitoAuthenticationStateProvider> logger,
+        IConfiguration configuration,
+        HttpClient httpClient,
         ILocalStorageService localStorageService)
     {
         _logger = logger;
@@ -52,100 +56,105 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
         _clientId = clientId;
     }
 
-    private AuthenticationState ReturnNotAuthenticated()
-    {
-        Token = null;
-        var identity = new ClaimsIdentity();
-        return new AuthenticationState(new ClaimsPrincipal(identity));
-    }
-
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         try
         {
-            var token = await _localStorageService.GetItemAsync<TokenResponseModel>(TokenKey);
-            if (token is null)
+            var userInfoFromLocalStorage =
+                await _localStorageService.GetItemAsync<LocalStorageUserInfoModel>(UserInfoKey);
+            if (userInfoFromLocalStorage is null)
             {
-                _logger.LogInformation("No token found in local storage");
-                return ReturnNotAuthenticated();
+                _logger.LogInformation("No user infos found in local storage");
+                return await ReturnNotAuthenticated();
             }
 
-            if (DateTime.UtcNow > token.ExpirationUtc)
+            var accessToken = userInfoFromLocalStorage.AccessToken;
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                _logger.LogInformation("Access token from local storage is empty");
+                return await ReturnNotAuthenticated();
+            }
+
+            if (DateTime.UtcNow > userInfoFromLocalStorage.AccessTokenExpirationDateUtc)
             {
                 _logger.LogInformation("Token has expired. Trying to refresh");
                 var refreshToken = await _localStorageService.GetItemAsStringAsync(RefreshTokenKey);
                 if (string.IsNullOrWhiteSpace(refreshToken))
                 {
                     _logger.LogInformation("No refresh_token found in local storage");
-                    await _localStorageService.RemoveItemAsync(RefreshTokenKey);
-                    return ReturnNotAuthenticated();
+                    return await ReturnNotAuthenticated();
                 }
 
                 var refresh = await Refresh(refreshToken);
                 if (refresh.IsError)
                 {
                     _logger.LogInformation("Failed to refresh token");
-                    await _localStorageService.RemoveItemAsync(TokenKey);
-                    await _localStorageService.RemoveItemAsync(RefreshTokenKey);
-                    return ReturnNotAuthenticated();
+                    return await ReturnNotAuthenticated();
                 }
 
-                _logger.LogInformation("Token has been refreshed");
-                await _localStorageService.SetItemAsync(TokenKey, refresh.Value);
-                token = refresh.Value;
-            }
+                var tokenResponseModel = refresh.Value;
+                userInfoFromLocalStorage = await SetLocalStorage(
+                    refreshToken,
+                    tokenResponseModel.AccessToken,
+                    tokenResponseModel.ExpiresIn,
+                    userInfoFromLocalStorage.UserId,
+                    userInfoFromLocalStorage.Username,
+                    userInfoFromLocalStorage.Email
+                );
 
-            var userInfo = await UserInfo(token.AccessToken);
-            if (userInfo.IsError)
-            {
-                _logger.LogInformation("AccessToken is not valid");
-                await _localStorageService.RemoveItemAsync(TokenKey);
-                return ReturnNotAuthenticated();
+                _logger.LogInformation("Token has been refreshed");
             }
 
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, userInfo.Value.PreferredUsername),
-                new Claim(ClaimTypes.Email, userInfo.Value.Email),
-                new Claim("sub", userInfo.Value.Sub),
-                new Claim("access_token", token.AccessToken)
+                new Claim(ClaimTypes.Name, userInfoFromLocalStorage.Username),
+                new Claim(ClaimTypes.Email, userInfoFromLocalStorage.Email),
+                new Claim(ClaimTypes.NameIdentifier, userInfoFromLocalStorage.UserId),
+                new Claim("access_token", userInfoFromLocalStorage.AccessToken)
             };
             var identity = new ClaimsIdentity(claims, "Server authentication");
-            Token = token;
+            _logger.LogInformation("User authenticated: {UserInfo}", userInfoFromLocalStorage);
             return new AuthenticationState(new ClaimsPrincipal(identity));
         }
         catch (HttpRequestException e)
         {
             _logger.LogError(e, "Get authentication state failed");
-            await _localStorageService.RemoveItemAsync(TokenKey);
-            return ReturnNotAuthenticated();
+            return await ReturnNotAuthenticated();
         }
     }
 
-    private async Task<ErrorOr<UserInfoResponseModel>> UserInfo(string accessToken)
+    private async Task<AuthenticationState> ReturnNotAuthenticated()
     {
-        var request = new HttpRequestMessage();
-        request.Method = HttpMethod.Get;
-        request.RequestUri = new Uri($"{_authority}/oauth2/userInfo");
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        var response = await _httpClient.SendAsync(request);
-        if (response.IsSuccessStatusCode == false)
-        {
-            _logger.LogError("Login api call failed with status code {StatusCode}", response.StatusCode);
-            return Error.Failure();
-        }
-
-        var jsonResponse = await response.Content.ReadAsStringAsync();
-        var userInfoResponseModel = JsonSerializer.Deserialize<UserInfoResponseModel>(jsonResponse);
-        if (userInfoResponseModel is null)
-        {
-            _logger.LogError("Failed to deserialize json response. {JsonResponse}", jsonResponse);
-            return Error.Failure();
-        }
-
-        return userInfoResponseModel;
+        await _localStorageService.RemoveItemAsync(UserInfoKey);
+        await _localStorageService.RemoveItemAsync(RefreshTokenKey);
+        var identity = new ClaimsIdentity();
+        _logger.LogInformation("User failed to authenticate");
+        return new AuthenticationState(new ClaimsPrincipal(identity));
     }
+
+    private async Task<LocalStorageUserInfoModel> SetLocalStorage(
+        string refreshToken,
+        string accessToken,
+        long accessTokenExpiresInSeconds,
+        string userId,
+        string username,
+        string email)
+    {
+        var accessTokenExpirationUtc = DateTime.UtcNow.Add(TimeSpan.FromSeconds(accessTokenExpiresInSeconds));
+        var localStorageUserInfo = new LocalStorageUserInfoModel(
+            accessToken,
+            accessTokenExpirationUtc,
+            userId,
+            username,
+            email
+        );
+
+        await _localStorageService.SetItemAsync(UserInfoKey, localStorageUserInfo);
+        await _localStorageService.SetItemAsStringAsync(RefreshTokenKey, refreshToken);
+        return localStorageUserInfo;
+    }
+
+    #region ApiCalls
 
     public async Task<ErrorOr<Success>> Login(string authorisationCode, string redirectUri)
     {
@@ -175,10 +184,32 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
             return Error.Failure();
         }
 
-        var currentDateTime = DateTime.UtcNow;
-        tokenResponseModel.ExpirationUtc = currentDateTime.Add(TimeSpan.FromSeconds(tokenResponseModel.ExpiresIn));
-        await _localStorageService.SetItemAsync(TokenKey, tokenResponseModel);
-        await _localStorageService.SetItemAsStringAsync(RefreshTokenKey, tokenResponseModel.RefreshToken);
+        if (string.IsNullOrWhiteSpace(tokenResponseModel.RefreshToken))
+        {
+            _logger.LogError("RefreshToken is empty");
+            return Error.Failure();
+        }
+
+        if (string.IsNullOrWhiteSpace(tokenResponseModel.AccessToken))
+        {
+            _logger.LogError("AccessToken is empty");
+            return Error.Failure();
+        }
+
+        var userInfoResult = await GetUserInfo(tokenResponseModel.AccessToken);
+        if (userInfoResult.IsError)
+        {
+            return userInfoResult.FirstError;
+        }
+
+        await SetLocalStorage(
+            tokenResponseModel.RefreshToken,
+            tokenResponseModel.AccessToken,
+            tokenResponseModel.ExpiresIn,
+            userInfoResult.Value.Sub,
+            userInfoResult.Value.PreferredUsername,
+            userInfoResult.Value.Email
+        );
         return Result.Success;
     }
 
@@ -209,9 +240,32 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
             return Error.Failure();
         }
 
-        var currentDateTime = DateTime.UtcNow;
-        tokenResponseModel.ExpirationUtc = currentDateTime.Add(TimeSpan.FromSeconds(tokenResponseModel.ExpiresIn));
         return tokenResponseModel;
+    }
+
+    private async Task<ErrorOr<UserInfoResponseModel>> GetUserInfo(string accessToken)
+    {
+        var request = new HttpRequestMessage();
+        request.Method = HttpMethod.Get;
+        request.RequestUri = new Uri($"{_authority}/oauth2/userInfo");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+        if (response.IsSuccessStatusCode == false)
+        {
+            _logger.LogError("Login api call failed with status code {StatusCode}", response.StatusCode);
+            return Error.Failure();
+        }
+
+        var jsonResponse = await response.Content.ReadAsStringAsync();
+        var userInfoResponseModel = JsonSerializer.Deserialize<UserInfoResponseModel>(jsonResponse);
+        if (userInfoResponseModel is null)
+        {
+            _logger.LogError("Failed to deserialize json response. {JsonResponse}", jsonResponse);
+            return Error.Failure();
+        }
+
+        return userInfoResponseModel;
     }
 
     public async Task<ErrorOr<Success>> Revoke()
@@ -239,7 +293,10 @@ public class CognitoAuthenticationStateProvider : AuthenticationStateProvider
             return Error.Failure();
         }
 
-        await _localStorageService.RemoveItemAsync(TokenKey);
+        await _localStorageService.RemoveItemAsync(UserInfoKey);
+        await _localStorageService.RemoveItemAsync(RefreshTokenKey);
         return Result.Success;
     }
+
+    #endregion
 }

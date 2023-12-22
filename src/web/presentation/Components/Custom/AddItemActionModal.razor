@@ -109,8 +109,8 @@
     {
         try
         {
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            if (string.IsNullOrWhiteSpace(accessToken))
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            if (string.IsNullOrWhiteSpace(userInfo?.AccessToken))
             {
                 _errorMessage = "No access token found";
                 return;
@@ -139,7 +139,7 @@
             if (_currentAction == Actions.Buy)
             {
                 var buyItem = await ItemTrackerApiService.BuyItem(
-                    accessToken,
+                    userInfo.AccessToken,
                     List.Url,
                     selectedItem.Id,
                     _amountBind.Value,
@@ -169,7 +169,7 @@
                 }
 
                 var sellItem = await ItemTrackerApiService.SellItem(
-                    accessToken,
+                    userInfo.AccessToken,
                     List.Url,
                     selectedItem.Id,
                     _amountBind.Value,

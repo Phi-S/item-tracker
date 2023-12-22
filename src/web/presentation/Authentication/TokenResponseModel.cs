@@ -13,7 +13,4 @@ public record TokenResponseModel(
     string TokenType,
     [property: JsonPropertyName("expires_in")]
     long ExpiresIn
-)
-{
-    public DateTime ExpirationUtc { get; set; }
-};
+);

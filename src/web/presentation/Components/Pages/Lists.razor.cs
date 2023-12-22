@@ -11,19 +11,14 @@ public class ListsRazor : ComponentBase
 {
     [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
     [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
-
     protected ErrorComponent ErrorComponentRef { get; set; } = default!;
     protected CreateNewListModal CreateNewListModalRef { get; set; } = default!;
-
     protected List<ListResponse>? Lists;
-
 
     protected override async Task OnInitializedAsync()
     {
-        var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-        accessToken.ThrowIfNull().IfEmpty().IfWhiteSpace();
-
-        var list = await ItemTrackerApiService.All(accessToken);
+        var userInfo = await AuthenticationStateProvider.UserInfo();
+        var list = await ItemTrackerApiService.All(userInfo?.AccessToken);
         if (list.IsError)
         {
             ErrorComponentRef.SetError(list.FirstError.Description);

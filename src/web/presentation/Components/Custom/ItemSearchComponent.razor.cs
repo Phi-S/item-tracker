@@ -70,13 +70,8 @@ public class ItemSearchComponentRazor : ComponentBase
                         break;
                     }
 
-                    var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-                    if (string.IsNullOrWhiteSpace(accessToken))
-                    {
-                        throw new Exception("No access token set");
-                    }
-
-                    var searchResult = await ItemTrackerApiService.Search(searchString, accessToken);
+                    var userInfo = await AuthenticationStateProvider.UserInfo();
+                    var searchResult = await ItemTrackerApiService.Search(searchString, userInfo?.AccessToken);
                     if (searchResult.IsError)
                     {
                         throw new Exception($"Failed to get search result. {searchResult.FirstError.Description}");

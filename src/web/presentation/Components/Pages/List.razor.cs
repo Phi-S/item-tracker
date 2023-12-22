@@ -17,7 +17,7 @@ public class ListRazor : ComponentBase
     protected AddItemActionModal AddItemActionModalRef { get; set; } = default!;
 
     protected readonly Dictionary<long, ShowItemActions> ShowItemActionsRefMap = new();
-    
+
     protected ListResponse? List;
     protected bool IsOwnList;
 
@@ -25,8 +25,8 @@ public class ListRazor : ComponentBase
     {
         try
         {
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            var list = await ItemTrackerApiService.Get(accessToken, ListUrl);
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            var list = await ItemTrackerApiService.Get(userInfo?.AccessToken, ListUrl);
             if (list.IsError)
             {
                 ErrorComponentRef.SetError(list.FirstError.Description);
@@ -50,8 +50,8 @@ public class ListRazor : ComponentBase
     {
         try
         {
-            var accessToken = AuthenticationStateProvider.Token?.AccessToken;
-            var list = await ItemTrackerApiService.Get(accessToken, ListUrl);
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            var list = await ItemTrackerApiService.Get(userInfo?.AccessToken, ListUrl);
             if (list.IsError)
             {
                 ErrorComponentRef.SetError(list.FirstError.Description);

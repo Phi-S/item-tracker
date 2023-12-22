@@ -1,4 +1,3 @@
-using infrastructure.Database.Models;
 using shared.Models.ListResponse;
 
 namespace application.Commands;
@@ -11,16 +10,6 @@ public class SnapshotForDay
     }
 
     public DateOnly DayOfSnapshot;
-
-    public bool SnapshotBeforeListCreation;
-
-    // Can be an item action or price refresh
-    public TimeOnly? LastChangeOnSnapshotDay;
-
-    // The latest price refresh on this day.
-    // Can be the price refresh of the previous day
-    // if no new price refresh was created on the day
-    public ItemPriceRefreshDbModel? LatestPriceRefresh { get; set; }
 
     // ItemSnapshots on the snapshot day
     public readonly List<ItemSnapshotForDay> ItemSnapshots = [];

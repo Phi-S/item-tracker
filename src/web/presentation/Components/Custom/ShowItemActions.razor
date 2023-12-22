@@ -7,7 +7,6 @@
 @using shared.Models.ListResponse
 @using Throw
 
-
 <table class="table table-sm table-stripe text-center align-middle @_hideString">
     <thead>
     <tr>
@@ -84,8 +83,8 @@
             );
             if (confirmation)
             {
-                var token = AuthenticationStateProvider.Token?.AccessToken;
-                var deleteAction = await ItemTrackerApiService.DeleteAction(token, action.ActionId);
+                var userInfo = await AuthenticationStateProvider.UserInfo();
+                var deleteAction = await ItemTrackerApiService.DeleteAction(userInfo?.AccessToken, action.ActionId);
                 if (deleteAction.IsError)
                 {
                     ToastService.Error($"Failed to delete action. {deleteAction.FirstError.Description} \n {actionString}");

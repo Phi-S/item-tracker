@@ -8,7 +8,7 @@ namespace presentation.ItemTrackerApi;
 
 public partial class ItemTrackerApiService
 {
-    public async Task<ErrorOr<List<ItemSearchResponse>>> Search(string searchString, string accessToken)
+    public async Task<ErrorOr<List<ItemSearchResponse>>> Search(string searchString, string? accessToken)
     {
         var encodedSearchString = HttpUtility.UrlEncode(searchString);
         var url = new Uri($"{_apiEndpointUrl}/items/search");

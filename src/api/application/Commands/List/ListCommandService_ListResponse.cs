@@ -5,7 +5,6 @@ using infrastructure.ExchangeRates;
 using Microsoft.Extensions.DependencyInjection;
 using shared.Currencies;
 using shared.Models.ListResponse;
-using Throw;
 
 namespace application.Commands.List;
 
@@ -166,12 +165,9 @@ public partial class ListCommandService
             {
                 break;
             }
-
-            snapsEnumerator.Current.SnapshotBeforeListCreation = true;
         }
 
         var noMoreSnapshotsLeft = false;
-        DateTime? lastActionCreatedAt = null;
         var actions = itemWithActions.OrderBy(action => action.CreatedUtc).ToList();
         foreach (var action in actions)
         {
@@ -228,22 +224,11 @@ public partial class ListCommandService
                     buff163Price
                 );
                 currentSnapshot.ItemSnapshots.Add(snap);
-                var lastChangeOnSnapshotDay = TimeOnly.MaxValue;
-                if (lastActionCreatedAt is not null && DateOnly.FromDateTime(lastActionCreatedAt.Value.Date)
-                        .Equals(currentSnapshot.DayOfSnapshot))
-                {
-                    lastChangeOnSnapshotDay = TimeOnly.FromDateTime(lastActionCreatedAt.Value);
-                }
-
-                currentSnapshot.LastChangeOnSnapshotDay = lastChangeOnSnapshotDay;
-
                 if (snapsEnumerator.MoveNext() == false)
                 {
                     noMoreSnapshotsLeft = true;
                 }
             }
-
-            lastActionCreatedAt = action.CreatedUtc;
 
             #endregion
 

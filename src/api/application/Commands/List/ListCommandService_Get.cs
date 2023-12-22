@@ -25,6 +25,7 @@ public partial class ListCommandService
                     return listResponse.FirstError;
                 }
 
+                _listResponseCacheService.UpdateCache(listResponse.Value);
                 result.Add(listResponse.Value);
             }
             else
