@@ -16,5 +16,5 @@ public record ListSnapshotResponse(
     [property: JsonRequired, JsonPropertyName("buff163_sell_price")]
     long? Buff163SellPrice,
     [property: JsonRequired, JsonPropertyName("created_utc")]
-    DateTime CreatedUtc
+    DateOnly CreatedUtc
 );

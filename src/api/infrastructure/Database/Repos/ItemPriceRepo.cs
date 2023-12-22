@@ -1,6 +1,7 @@
 ﻿using ErrorOr;
 using infrastructure.Database.Models;
 using Microsoft.EntityFrameworkCore;
+using Error = ErrorOr.Error;
 
 namespace infrastructure.Database.Repos;
 
@@ -44,5 +45,25 @@ public class ItemPriceRepo
         }
 
         return latestItemPriceRefresh;
+    }
+
+    public Task<List<ItemPriceRefreshDbModel>> GetSince(DateTime since)
+    {
+        return Task.FromResult(
+            _dbContext.PricesRefresh.Where(priceRefresh => priceRefresh.CreatedUtc >= since).ToList());
+    }
+
+    public async Task<ErrorOr<ItemPriceDbModel>> GetPriceForItem(long itemId, ItemPriceRefreshDbModel priceRefresh)
+    {
+        var price = await _dbContext.Prices.FirstOrDefaultAsync(price =>
+            price.ItemPriceRefresh.Id == priceRefresh.Id && price.ItemId == itemId);
+        if (price is null)
+        {
+            return Error.NotFound(
+                description:
+                $"No price found for item with the id \"{itemId}\" and the price refresh: Id: {priceRefresh.Id} CreatedUtc: {priceRefresh.CreatedUtc}");
+        }
+
+        return price;
     }
 }

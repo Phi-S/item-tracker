@@ -99,7 +99,7 @@ public class ItemListRepo
 
         return (list, snapshots, itemAction, lastPriceRefresh, pricesForItemsInList);
     }
-    
+
     public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
     {
         return Task.FromResult(_dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
@@ -114,10 +114,15 @@ public class ItemListRepo
 
     public async Task<ErrorOr<ItemListDbModel>> GetListByUrl(string url)
     {
-        var list = await _dbContext.Lists.FirstOrDefaultAsync(list => list.Deleted == false && list.Url.Equals(url));
+        var list = await _dbContext.Lists.FirstOrDefaultAsync(list => list.Url.Equals(url));
         if (list is null)
         {
             return Error.NotFound(description: "No list found for the given url");
+        }
+
+        if (list.Deleted)
+        {
+            return Error.Conflict(description: "List is marked for deletion");
         }
 
         return list;
@@ -149,6 +154,18 @@ public class ItemListRepo
         }
 
         return Task.FromResult(itemCount);
+    }
+
+    public Task<IQueryable<ItemListItemActionDbModel>> GetAllItemActionsForListUntil(long listId, DateTime until)
+    {
+        return Task.FromResult(
+            _dbContext.ItemActions.Where(action => action.List.Id == listId && action.CreatedUtc <= until));
+    }
+    
+    public Task<IQueryable<ItemListItemActionDbModel>> GetAllItemActionsForList(long listId)
+    {
+        return Task.FromResult(
+            _dbContext.ItemActions.Where(action => action.List.Id == listId));
     }
 
     public async Task AddItemAction(string actionType,

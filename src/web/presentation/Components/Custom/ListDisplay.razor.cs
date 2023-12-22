@@ -51,9 +51,9 @@ public class ListDisplayRazor : ComponentBase
         if (List.Snapshots.Count != 0)
         {
             foreach (var listValue in listResponse.Snapshots.Where(snapshot =>
-                         snapshot.CreatedUtc >= DateTime.UtcNow.Subtract(TimeSpan.FromDays(30))))
+                         snapshot.CreatedUtc >= DateOnly.FromDateTime(DateTime.UtcNow.Subtract(TimeSpan.FromDays(30)))))
             {
-                dataLabels.Add(listValue.CreatedUtc.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
+                dataLabels.Add(listValue.CreatedUtc.ToString("yyyy-MM-dd"));
                 steamPriceValues.Add(listValue.SteamSellPrice is null
                     ? 0
                     : CurrencyHelper.ToDouble(listResponse.Currency, listValue.SteamSellPrice.Value));

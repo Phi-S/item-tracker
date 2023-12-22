@@ -1,4 +1,4 @@
-﻿using application.Commands;
+﻿using application.Commands.List;
 using ErrorOr;
 using Microsoft.AspNetCore.Mvc;
 using presentation.Extension;
@@ -22,7 +22,7 @@ public static class ItemListEndpoint
             ListCommandService listCommandService) =>
         {
             var userId = context.User.Id();
-            var lists = await listCommandService.GetAllForUser(userId);
+            var lists = await listCommandService.GetUserLists(userId);
             if (lists.IsError)
             {
                 return lists.FirstError.Type == ErrorType.Unauthorized
@@ -74,6 +74,23 @@ public static class ItemListEndpoint
         {
             var userId = context.User.Id();
             var listResponse = await listCommandService.GetList(userId, url);
+            if (listResponse.IsError)
+            {
+                return listResponse.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(listResponse.FirstError.Description)
+                    : Results.Extensions.InternalServerError(listResponse.FirstError.Description);
+            }
+
+            return Results.Ok(listResponse.Value);
+        }).AllowAnonymous();
+
+        group.MapGet("{url}/history", async (
+            HttpContext context,
+            ListCommandService listCommandService,
+            string url) =>
+        {
+            var userId = context.User.Id();
+            var listResponse = await listCommandService.GetListResponse(url);
             if (listResponse.IsError)
             {
                 return listResponse.FirstError.Type == ErrorType.Unauthorized

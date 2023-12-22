@@ -79,12 +79,12 @@
                                         Steam:
                                     </div>
                                     <Tooltip Title="in percent">
-                                        <div class="row m-0 p-0 justify-content-center">
+                                        <div class="row m-0 p-0 justify-content-center" style="@PerformanceColor.GetPerformanceColor(List.SteamPerformancePercent)">
                                             @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
                                         </div>
                                     </Tooltip>
                                     <Tooltip Title="total gain/loss">
-                                        <div class="row m-0 p-0 justify-content-center">
+                                        <div class="row m-0 p-0 justify-content-center" style="@PerformanceColor.GetPerformanceColor(List.SteamPerformanceValue)">
                                             @FormatHelper.FormatCurrency(List.Currency, List.SteamPerformanceValue, true)
                                         </div>
                                     </Tooltip>
@@ -94,13 +94,13 @@
                                         Buff163:
                                     </div>
                                     <Tooltip Title="in percent">
-                                        <div class="row m-0 p-0 justify-content-center">
-                                            @FormatHelper.FormatPerformancePercent(List.SteamPerformancePercent)
+                                        <div class="row m-0 p-0 justify-content-center" style="@PerformanceColor.GetPerformanceColor(List.Buff163PerformancePercent)">
+                                            @FormatHelper.FormatPerformancePercent(List.Buff163PerformancePercent)
                                         </div>
                                     </Tooltip>
                                     <Tooltip Title="total gain/loss">
-                                        <div class="row m-0 p-0 justify-content-center">
-                                            @FormatHelper.FormatCurrency(List.Currency, List.SteamPerformanceValue, true)
+                                        <div class="row m-0 p-0 justify-content-center" style="@PerformanceColor.GetPerformanceColor(List.Buff163PerformanceValue)">
+                                            @FormatHelper.FormatCurrency(List.Currency, List.Buff163PerformanceValue, true)
                                         </div>
                                     </Tooltip>
                                 </div>

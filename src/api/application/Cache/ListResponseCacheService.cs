@@ -6,27 +6,37 @@ namespace application.Cache;
 
 public class ListResponseCacheService
 {
-    private static readonly Dictionary<string, ListResponse> ListResponses = new();
+    private static readonly Dictionary<string, (DateOnly cacheDay, ListResponse listResponse)> ListResponses = new();
     private static readonly object ListResponsesLock = new();
+
+    private static DateOnly GetCurrentDay()
+    {
+        return DateOnly.FromDateTime(DateTime.UtcNow);
+    }
 
     public ErrorOr<ListResponse> GetListResponse(string listUrl)
     {
         lock (ListResponsesLock)
         {
-            if (ListResponses.TryGetValue(listUrl, out var listResponse))
+            if (ListResponses.TryGetValue(listUrl, out var listResponse) == false)
             {
-                return listResponse;
+                return Error.NotFound();
             }
-        }
 
-        return Error.NotFound();
+            if (listResponse.cacheDay == GetCurrentDay())
+            {
+                return listResponse.listResponse;
+            }
+
+            return Error.Conflict();
+        }
     }
 
     public void UpdateCache(ListResponse listResponse)
     {
         lock (ListResponsesLock)
         {
-            ListResponses[listResponse.Url] = listResponse;
+            ListResponses[listResponse.Url] = (GetCurrentDay(), listResponse);
         }
     }
 
