@@ -32,9 +32,8 @@ public class ListRazor : ComponentBase
                 ErrorComponentRef.SetError(list.FirstError.Description);
                 return;
             }
-
-            var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            IsOwnList = authenticationState.User.IsOwnList(list.Value);
+            
+            IsOwnList = list.Value.UserId.Equals(userInfo?.UserId);
             List = list.Value;
             await InvokeAsync(StateHasChanged);
         }

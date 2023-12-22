@@ -30,8 +30,8 @@ public class ListDisplayRazor : ComponentBase
     {
         if (firstRender)
         {
-            var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            IsOwnList = authenticationState.User.IsOwnList(List);
+            var userInfo = await AuthenticationStateProvider.UserInfo();
+            IsOwnList = List.UserId.Equals(userInfo?.UserId);
             await RenderDiagram(List);
             StateHasChanged();
             await base.OnAfterRenderAsync(firstRender);
