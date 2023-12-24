@@ -30,19 +30,36 @@ public partial class ListCommandService
 
         #region CreateSnapshotDays
 
-        var snapshotResult = new List<SnapshotForDay>();
+        var snapshotsDays = new List<DateOnly>();
         for (var i = 0; i < snapshotsForLastDays; i++)
         {
             var date = DateOnly.FromDateTime(
                 snapshotStartDate.Add(TimeSpan.FromDays(i))
                     .Date
             );
-            snapshotResult.Add(new SnapshotForDay(date));
+            snapshotsDays.Add(date);
         }
 
         #endregion
 
         #region Process
+
+        var processItemsTasks =
+            new List<Task<ErrorOr<(ListItemResponse listItemResponse, Dictionary<DateOnly, ItemSnapshotForDay>
+                snapshotsResult)>>>();
+        var actions = await _unitOfWork.ItemListRepo.GetAllItemActionsForList(list.Id);
+        var itemIdsWithActionsGrouping = actions.GroupBy(action => action.ItemId).ToList();
+        foreach (var itemIdsWithActions in itemIdsWithActionsGrouping)
+        {
+            processItemsTasks.Add(
+                GetListItemResponseWithItemSnapshots(snapshotsDays, list, itemIdsWithActions, priceRefreshes)
+            );
+        }
+
+        await Task.WhenAll(processItemsTasks);
+
+        var listItemResponses = new List<ListItemResponse>();
+        var itemSnapshots = new Dictionary<DateOnly, List<ItemSnapshotForDay>>();
 
         long listInvestedCapital = 0;
         var listItemCount = 0;
@@ -50,65 +67,59 @@ public partial class ListCommandService
         long? listBuff163Price = null;
         long? listSteamPerformanceValue = null;
         long? listBuff163PerformanceValue = null;
-
-        var processItemsTasks = new List<Task>();
-
-        var listItemResponses = new List<ListItemResponse>();
-        var actions = await _unitOfWork.ItemListRepo.GetAllItemActionsForList(list.Id);
-        var itemIdsWithActionsGrouping = actions.GroupBy(action => action.ItemId).ToList();
-        foreach (var itemIdsWithActions in itemIdsWithActionsGrouping)
+        foreach (var processItemsTask in processItemsTasks)
         {
-            processItemsTasks.Add(Task.Run(async () =>
+            var result = processItemsTask.Result;
+            if (result.IsError)
             {
-                var listItemResponseWithItemSnapshotsResult = await GetListItemResponseWithItemSnapshots
-                (
-                    snapshotResult,
-                    list,
-                    itemIdsWithActions,
-                    priceRefreshes
-                );
-                if (listItemResponseWithItemSnapshotsResult.IsError)
-                {
-                    throw new Exception(listItemResponseWithItemSnapshotsResult.FirstError.Description);
-                }
+                return result.FirstError;
+            }
 
-                var listItemResponse = listItemResponseWithItemSnapshotsResult.Value;
-                listItemResponses.Add(listItemResponse);
-
-                listInvestedCapital += listItemResponse.InvestedCapital;
-                listItemCount += listItemResponse.ItemCount;
-                if (listItemResponse.SteamSellPriceForOne is not null)
+            var (listItemResponse, snapshotsResult) = result.Value;
+            listItemResponses.Add(listItemResponse);
+            foreach (var snapshotForDay in snapshotsResult)
+            {
+                if (itemSnapshots.ContainsKey(snapshotForDay.Key) == false)
                 {
-                    listSteamPrice ??= 0;
-                    listSteamPrice += listItemResponse.SteamSellPriceForOne.Value * listItemResponse.ItemCount;
+                    itemSnapshots.Add(snapshotForDay.Key, [snapshotForDay.Value]);
                 }
-
-                if (listItemResponse.Buff163SellPriceForOne is not null)
+                else
                 {
-                    listBuff163Price ??= 0;
-                    listBuff163Price += listItemResponse.Buff163SellPriceForOne.Value * listItemResponse.ItemCount;
+                    itemSnapshots[snapshotForDay.Key].Add(snapshotForDay.Value);
                 }
+            }
 
-                if (listItemResponse.SteamPerformanceValue is not null)
-                {
-                    listSteamPerformanceValue ??= 0;
-                    listSteamPerformanceValue += listItemResponse.SteamPerformanceValue;
-                }
+            listInvestedCapital += listItemResponse.InvestedCapital;
+            listItemCount += listItemResponse.ItemCount;
+            if (listItemResponse.SteamSellPriceForOne is not null)
+            {
+                listSteamPrice ??= 0;
+                listSteamPrice += listItemResponse.SteamSellPriceForOne.Value * listItemResponse.ItemCount;
+            }
 
-                if (listItemResponse.Buff163PerformanceValue is not null)
-                {
-                    listBuff163PerformanceValue ??= 0;
-                    listBuff163PerformanceValue += listItemResponse.Buff163PerformanceValue;
-                }
-            }));
+            if (listItemResponse.Buff163SellPriceForOne is not null)
+            {
+                listBuff163Price ??= 0;
+                listBuff163Price += listItemResponse.Buff163SellPriceForOne.Value * listItemResponse.ItemCount;
+            }
+
+            if (listItemResponse.SteamPerformanceValue is not null)
+            {
+                listSteamPerformanceValue ??= 0;
+                listSteamPerformanceValue += listItemResponse.SteamPerformanceValue;
+            }
+
+            if (listItemResponse.Buff163PerformanceValue is not null)
+            {
+                listBuff163PerformanceValue ??= 0;
+                listBuff163PerformanceValue += listItemResponse.Buff163PerformanceValue;
+            }
         }
-
-        await Task.WhenAll(processItemsTasks);
 
         var totalSteamPerformancePercent = GetPerformancePercent(listSteamPrice, listInvestedCapital);
         var totalBuff163PerformancePercent = GetPerformancePercent(listBuff163Price, listInvestedCapital);
 
-        var snapshots = snapshotResult.Select(snap => snap.ListSnapshot).ToList();
+        var snapshots = itemSnapshots.Select(pair => GetListSnapshot(pair.Key, pair.Value)).ToList();
 
         #endregion
 
@@ -134,11 +145,13 @@ public partial class ListCommandService
         return listResponse;
     }
 
-    private async Task<ErrorOr<ListItemResponse>> GetListItemResponseWithItemSnapshots(
-        List<SnapshotForDay> snapshotDayTemps,
-        ItemListDbModel list,
-        IGrouping<long, ItemListItemActionDbModel> itemWithActions,
-        List<ItemPriceRefreshDbModel> priceRefreshes)
+    private async
+        Task<ErrorOr<(ListItemResponse listItemResponse, Dictionary<DateOnly, ItemSnapshotForDay> snapshotsResult)>>
+        GetListItemResponseWithItemSnapshots(
+            IEnumerable<DateOnly> snapshotDays,
+            ItemListDbModel list,
+            IGrouping<long, ItemListItemActionDbModel> itemWithActions,
+            IReadOnlyCollection<ItemPriceRefreshDbModel> priceRefreshes)
     {
         var itemId = itemWithActions.Key;
         var itemActionResponses = new List<ListItemActionResponse>();
@@ -150,24 +163,28 @@ public partial class ListCommandService
         var gotSales = false;
 
         var listCreationDay = DateOnly.FromDateTime(list.CreatedUtc);
-        var snaps = snapshotDayTemps.OrderBy(snap => snap.DayOfSnapshot).ToList();
-        using var snapsEnumerator = snaps.GetEnumerator();
+        snapshotDays = snapshotDays.Order().ToList();
+        using var snapshotDaysEnumerator = snapshotDays.GetEnumerator();
+
+        var snapshotsResult = new Dictionary<DateOnly, ItemSnapshotForDay>();
+        var noMoreSnapshotDaysLeft = false;
         // If snapshots are created before the list was created,
         // skip to snapshot when the list was created
         while (true)
         {
-            if (snapsEnumerator.MoveNext() == false)
+            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0, null, null));
+            if (snapshotDaysEnumerator.MoveNext() == false)
             {
-                return Error.Failure("All snapshots are created before the list was created");
+                noMoreSnapshotDaysLeft = true;
+                break;
             }
 
-            if (snapsEnumerator.Current.DayOfSnapshot.Equals(listCreationDay))
+            if (snapshotDaysEnumerator.Current.Equals(listCreationDay))
             {
                 break;
             }
         }
 
-        var noMoreSnapshotsLeft = false;
         var actions = itemWithActions.OrderBy(action => action.CreatedUtc).ToList();
         foreach (var action in actions)
         {
@@ -188,45 +205,49 @@ public partial class ListCommandService
 
             #region CreateSnapshot
 
-            var actionCreationDayUtc = DateOnly.FromDateTime(action.CreatedUtc);
-            var currentSnapshot = snapsEnumerator.Current;
             // if the next action is for the snapshot of the next day,
             // crete snapshot for all actions until the current action
-            if (noMoreSnapshotsLeft == false &&
-                currentSnapshot.DayOfSnapshot < actionCreationDayUtc)
+            if (noMoreSnapshotDaysLeft == false)
             {
-                // create snapshot for all actions until current...
-                long investedCapitalForItem = 0;
-                if (buyPrices.Count > 0 && itemCount > 0)
+                var actionCreationDayUtc = DateOnly.FromDateTime(action.CreatedUtc);
+                var currentSnapshotDay = snapshotDaysEnumerator.Current;
+                while (currentSnapshotDay < actionCreationDayUtc)
                 {
-                    investedCapitalForItem = (long)Math.Round(buyPrices.Average() * itemCount, 0);
-                }
+                    long investedCapitalForItem = 0;
+                    if (buyPrices.Count > 0 && itemCount > 0)
+                    {
+                        investedCapitalForItem = (long)Math.Round(buyPrices.Average() * itemCount, 0);
+                    }
 
-                var closestPriceRefresh = priceRefreshes
-                    .Where(priceRefresh =>
-                        DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshot.DayOfSnapshot)
-                    .OrderBy(priceRefresh => priceRefresh.CreatedUtc)
-                    .Last();
+                    var closestPriceRefresh = priceRefreshes
+                        .Where(priceRefresh =>
+                            DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshotDay)
+                        .OrderBy(priceRefresh => priceRefresh.CreatedUtc)
+                        .Last();
 
-                var getPriceResult = await GetPrice(list, itemId, closestPriceRefresh);
-                if (getPriceResult.IsError)
-                {
-                    return getPriceResult.FirstError;
-                }
+                    var getPriceResult = await GetPrice(list.Currency, itemId, closestPriceRefresh);
+                    if (getPriceResult.IsError)
+                    {
+                        return getPriceResult.FirstError;
+                    }
 
-                var (steamPrice, buff163Price) = getPriceResult.Value;
-                var snap = new ItemSnapshotForDay(
-                    investedCapitalForItem,
-                    itemCount,
-                    salesValue,
-                    salesProfit,
-                    steamPrice,
-                    buff163Price
-                );
-                currentSnapshot.ItemSnapshots.Add(snap);
-                if (snapsEnumerator.MoveNext() == false)
-                {
-                    noMoreSnapshotsLeft = true;
+                    var (steamPrice, buff163Price) = getPriceResult.Value;
+                    var snap = new ItemSnapshotForDay(
+                        investedCapitalForItem,
+                        itemCount,
+                        salesValue,
+                        salesProfit,
+                        steamPrice,
+                        buff163Price
+                    );
+                    snapshotsResult[currentSnapshotDay] = snap;
+                    if (snapshotDaysEnumerator.MoveNext() == false)
+                    {
+                        noMoreSnapshotDaysLeft = true;
+                        break;
+                    }
+
+                    currentSnapshotDay = snapshotDaysEnumerator.Current;
                 }
             }
 
@@ -270,11 +291,11 @@ public partial class ListCommandService
 
         // snapshots are left
         // create snapshots for the rest
-        if (noMoreSnapshotsLeft == false)
+        if (noMoreSnapshotDaysLeft == false)
         {
             while (true)
             {
-                var currentSnapshot = snapsEnumerator.Current;
+                var currentSnapshotDay = snapshotDaysEnumerator.Current;
                 long investedCapitalForItem = 0;
                 if (buyPrices.Count > 0 && itemCount > 0)
                 {
@@ -283,11 +304,11 @@ public partial class ListCommandService
 
                 var closestPriceRefresh = priceRefreshes
                     .Where(priceRefresh =>
-                        DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshot.DayOfSnapshot)
+                        DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshotDay)
                     .OrderBy(priceRefresh => priceRefresh.CreatedUtc)
                     .Last();
 
-                var getPriceResult = await GetPrice(list, itemId, closestPriceRefresh);
+                var getPriceResult = await GetPrice(list.Currency, itemId, closestPriceRefresh);
                 if (getPriceResult.IsError)
                 {
                     return getPriceResult.FirstError;
@@ -302,8 +323,8 @@ public partial class ListCommandService
                     steamPrice,
                     buff163Price
                 );
-                currentSnapshot.ItemSnapshots.Add(snap);
-                if (snapsEnumerator.MoveNext() == false)
+                snapshotsResult[currentSnapshotDay] = snap;
+                if (snapshotDaysEnumerator.MoveNext() == false)
                 {
                     break;
                 }
@@ -315,7 +336,7 @@ public partial class ListCommandService
         #region CreateListItemResponse
 
         var latestPriceRefresh = priceRefreshes.Last();
-        var latestPricesResult = await GetPrice(list, itemId, latestPriceRefresh);
+        var latestPricesResult = await GetPrice(list.Currency, itemId, latestPriceRefresh);
         if (latestPricesResult.IsError)
         {
             return latestPricesResult.FirstError;
@@ -359,7 +380,56 @@ public partial class ListCommandService
 
         #endregion
 
-        return listItemResponse;
+        return (listItemResponse, snapshotsResult);
+    }
+
+    private static ListSnapshotResponse GetListSnapshot(DateOnly snapshotDay, List<ItemSnapshotForDay> snapshotsForDay)
+    {
+        if (snapshotsForDay.Count == 0)
+        {
+            return new ListSnapshotResponse(
+                0,
+                0,
+                0,
+                0,
+                null,
+                null,
+                snapshotDay
+            );
+        }
+
+        long totalInvestedCapital = 0;
+        long totalItemCount = 0;
+        long salesValue = 0;
+        long profit = 0;
+        long? steamValue = 0;
+        long? buff163Value = 0;
+        foreach (var snapshotForItem in snapshotsForDay)
+        {
+            totalInvestedCapital += snapshotForItem.TotalInvestedCapital;
+            totalItemCount += snapshotForItem.TotalItemCount;
+            salesValue += snapshotForItem.SalesValue;
+            profit += snapshotForItem.Profit;
+            if (snapshotForItem.SteamValueForOne is not null)
+            {
+                steamValue += snapshotForItem.SteamValueForOne * snapshotForItem.TotalItemCount;
+            }
+
+            if (snapshotForItem.Buff163ValueForOne is not null)
+            {
+                buff163Value += snapshotForItem.Buff163ValueForOne * snapshotForItem.TotalItemCount;
+            }
+        }
+
+        return new ListSnapshotResponse(
+            totalInvestedCapital,
+            totalItemCount,
+            salesValue,
+            profit,
+            steamValue,
+            buff163Value,
+            snapshotDay
+        );
     }
 
     private static double? GetPerformancePercent(long? currentPrice, long buyPrice)
@@ -379,7 +449,7 @@ public partial class ListCommandService
     }
 
     private async Task<ErrorOr<(long? steamPrice, long? buff163Price)>> GetPrice(
-        ItemListDbModel list,
+        string currency,
         long itemId,
         ItemPriceRefreshDbModel priceRefresh
     )
@@ -404,11 +474,11 @@ public partial class ListCommandService
         long? steamValue = null;
         if (priceForItemId.SteamPriceCentsUsd is not null)
         {
-            if (list.Currency.Equals(CurrenciesConstants.USD))
+            if (currency.Equals(CurrenciesConstants.USD))
             {
                 steamValue = priceForItemId.SteamPriceCentsUsd.Value;
             }
-            else if (list.Currency.Equals(CurrenciesConstants.EURO))
+            else if (currency.Equals(CurrenciesConstants.EURO))
             {
                 steamValue = ExchangeRateHelper.ApplyExchangeRate(
                     priceForItemId.SteamPriceCentsUsd.Value,
@@ -416,18 +486,18 @@ public partial class ListCommandService
             }
             else
             {
-                return Error.Failure(description: $"Currency \"{list.Currency}\" is not implemented");
+                return Error.Failure(description: $"Currency \"{currency}\" is not implemented");
             }
         }
 
         long? buff163Value = null;
         if (priceForItemId.Buff163PriceCentsUsd is not null)
         {
-            if (list.Currency.Equals(CurrenciesConstants.USD))
+            if (currency.Equals(CurrenciesConstants.USD))
             {
                 buff163Value = priceForItemId.Buff163PriceCentsUsd.Value;
             }
-            else if (list.Currency.Equals(CurrenciesConstants.EURO))
+            else if (currency.Equals(CurrenciesConstants.EURO))
             {
                 buff163Value = ExchangeRateHelper.ApplyExchangeRate(
                     priceForItemId.Buff163PriceCentsUsd.Value,
@@ -435,7 +505,7 @@ public partial class ListCommandService
             }
             else
             {
-                return Error.Failure(description: $"Currency \"{list.Currency}\" is not implemented");
+                return Error.Failure(description: $"Currency \"{currency}\" is not implemented");
             }
         }
 
