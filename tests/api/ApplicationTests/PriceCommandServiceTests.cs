@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using application.Cache;
 using application.Commands;
 using application.Commands.List;
 using infrastructure.Database;
@@ -23,6 +24,7 @@ public class PriceCommandServiceTests
     public async Task RefreshItemPricesTest()
     {
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
+        serviceCollection.AddScoped<ListResponseCacheService>();
         serviceCollection.AddScoped<PriceCommandService>();
         serviceCollection.AddScoped<ListCommandService>();
         await using var provider = serviceCollection.BuildServiceProvider();
@@ -101,18 +103,6 @@ public class PriceCommandServiceTests
         }
 
         Assert.True(allItems.Value.Count == itemPricesCount, "Not all items got prices");
-
-        var listValue = dbContext.ListSnapshots.Where(listValue => listValue.List.Id == list.Entity.Id).ToList();
-        if (listValue.Count == 0)
-        {
-            Assert.Fail("No itemListValues found");
-        }
-
-        if (listValue.Count != 1)
-        {
-            Assert.Fail($"Multiple list values found ({listValue.Count})");
-        }
-
         _outputHelper.WriteLine($"RefreshItemPrices duration: {sw.ElapsedMilliseconds}");
         Assert.True(true);
     }

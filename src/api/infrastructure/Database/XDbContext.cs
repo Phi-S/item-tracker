@@ -9,7 +9,6 @@ public class XDbContext : DbContext
 {
     public DbSet<ItemListDbModel> Lists { get; set; } = null!;
     public DbSet<ItemListItemActionDbModel> ItemActions { get; set; } = null!;
-    public DbSet<ItemListSnapshotDbModel> ListSnapshots { get; set; } = null!;
     public DbSet<ItemPriceRefreshDbModel> PricesRefresh { get; set; } = null!;
     public DbSet<ItemPriceDbModel> Prices { get; set; } = null!;
 

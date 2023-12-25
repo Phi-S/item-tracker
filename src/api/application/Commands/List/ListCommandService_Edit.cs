@@ -48,7 +48,6 @@ public partial class ListCommandService
             return latestPriceRefresh.FirstError;
         }
 
-        await _unitOfWork.ItemListRepo.NewSnapshot(list, latestPriceRefresh.Value);
         await _unitOfWork.Save();
         return url;
     }

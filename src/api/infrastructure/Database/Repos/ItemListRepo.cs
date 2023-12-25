@@ -67,39 +67,6 @@ public class ItemListRepo
         listToRemove.Deleted = true;
     }
 
-    public async
-        Task<(
-            ItemListDbModel List,
-            List<ItemListSnapshotDbModel> Snapshots,
-            List<ItemListItemActionDbModel> ItemActions,
-            ItemPriceRefreshDbModel LastPriceRefresh,
-            List<ItemPriceDbModel> PricesForItemsInList
-            )> GetListInfos(
-            long listId)
-    {
-        var list = await _dbContext.Lists.FindAsync(listId);
-        list.ThrowIfNull().Throw().IfTrue(list.Deleted);
-        var snapshots = _dbContext.ListSnapshots
-            .Where(snapshot => snapshot.List.Id == listId)
-            .Include(snapshot => snapshot.List)
-            .Include(snapshot => snapshot.ItemPriceRefresh)
-            .ToList();
-        var itemAction = _dbContext.ItemActions
-            .Where(action => action.List.Id == listId)
-            .ToList();
-        var lastPriceRefresh = await _dbContext.PricesRefresh
-            .OrderByDescending(priceRefresh => priceRefresh.CreatedUtc)
-            .FirstAsync();
-        var itemsInListIds = itemAction
-            .GroupBy(action => action.ItemId)
-            .Select(group => group.Key);
-        var pricesForItemsInList = _dbContext.Prices
-            .Where(price => price.ItemPriceRefresh.Id == lastPriceRefresh.Id && itemsInListIds.Contains(price.ItemId))
-            .ToList();
-
-        return (list, snapshots, itemAction, lastPriceRefresh, pricesForItemsInList);
-    }
-
     public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
     {
         return Task.FromResult(_dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
@@ -203,28 +170,5 @@ public class ItemListRepo
     public Task<ItemListItemActionDbModel> GetItemActionById(long actionId)
     {
         return _dbContext.ItemActions.Include(action => action.List).FirstAsync(action => action.Id == actionId);
-    }
-
-    public async Task NewSnapshot(ItemListDbModel list, ItemPriceRefreshDbModel priceRefresh)
-    {
-        await _dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
-        {
-            List = list,
-            ItemPriceRefresh = priceRefresh,
-            CreatedUtc = DateTime.UtcNow
-        });
-    }
-
-    public async Task NewSnapshotForEveryList(ItemPriceRefreshDbModel priceRefresh)
-    {
-        foreach (var list in _dbContext.Lists.Where(list => list.Deleted == false))
-        {
-            await _dbContext.ListSnapshots.AddAsync(new ItemListSnapshotDbModel
-            {
-                List = list,
-                ItemPriceRefresh = priceRefresh,
-                CreatedUtc = priceRefresh.CreatedUtc
-            });
-        }
     }
 }

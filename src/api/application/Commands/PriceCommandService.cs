@@ -88,7 +88,6 @@ public class PriceCommandService
 
         await Task.WhenAll(formatPriceTasks);
         await _unitOfWork.ItemPriceRepo.Add(dbPrices);
-        await _unitOfWork.ItemListRepo.NewSnapshotForEveryList(priceRefresh);
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache();
         _logger.LogInformation("Item prices refreshed");

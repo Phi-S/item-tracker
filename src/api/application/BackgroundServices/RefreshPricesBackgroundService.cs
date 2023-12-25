@@ -20,26 +20,24 @@ public class RefreshPricesBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        const int executionHour = 20;
+        const int sleepBetweenChecksInSec = 30;
+
         _logger.LogInformation("RefreshPricesBackgroundService started");
-        var executedAt8 = DateTime.UtcNow.Hour == 8;
-        var executedAt20 = DateTime.UtcNow.Hour == 20;
         var retries = 0;
+        var executed = false;
         while (stoppingToken.IsCancellationRequested == false)
         {
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(sleepBetweenChecksInSec), stoppingToken);
 
             var currentDateTimeUtcHour = DateTime.UtcNow.Hour;
-            if (currentDateTimeUtcHour is not (8 or 20))
+            if (currentDateTimeUtcHour is not executionHour)
             {
+                executed = false;
                 continue;
             }
 
-            if (currentDateTimeUtcHour is 8 && executedAt8)
-            {
-                continue;
-            }
-
-            if (currentDateTimeUtcHour is 20 && executedAt20)
+            if (executed)
             {
                 continue;
             }
@@ -63,23 +61,11 @@ public class RefreshPricesBackgroundService : BackgroundService
                         continue;
                     }
                 }
-                else
-                {
-                    _logger.LogInformation("Item prices refreshed");
-                }
             }
 
             retries = 0;
-            if (currentDateTimeUtcHour is 8)
-            {
-                executedAt8 = true;
-                executedAt20 = false;
-            }
-            else
-            {
-                executedAt20 = true;
-                executedAt8 = true;
-            }
+            executed = true;
         }
+        _logger.LogWarning("RefreshPricesBackgroundService exited");
     }
 }

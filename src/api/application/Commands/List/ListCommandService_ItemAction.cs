@@ -50,8 +50,7 @@ public partial class ListCommandService
         {
             return latestPriceRefresh.FirstError;
         }
-
-        await _unitOfWork.ItemListRepo.NewSnapshot(list.Value, latestPriceRefresh.Value);
+        
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
@@ -110,8 +109,7 @@ public partial class ListCommandService
         {
             return latestPriceRefresh.FirstError;
         }
-
-        await _unitOfWork.ItemListRepo.NewSnapshot(list.Value, latestPriceRefresh.Value);
+        
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(listUrl);
         return Result.Created;
@@ -138,8 +136,7 @@ public partial class ListCommandService
         {
             return latestPriceRefresh.FirstError;
         }
-
-        await _unitOfWork.ItemListRepo.NewSnapshot(action.List, latestPriceRefresh.Value);
+        
         await _unitOfWork.Save();
         _listResponseCacheService.DeleteCache(action.List.Url);
         return Result.Deleted;
