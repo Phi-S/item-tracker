@@ -1,32 +1,29 @@
 using System.Diagnostics;
-using application.Cache;
-using application.Commands;
-using application.Commands.List;
+using application.Commands.Items;
 using infrastructure.Database;
 using infrastructure.Database.Models;
 using infrastructure.Items;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using TestHelper.TestSetup;
 using Xunit.Abstractions;
 
-namespace ApplicationTests;
+namespace ApplicationTests.Commands.Items;
 
-public class PriceCommandServiceTests
+public class RefreshItemPricesCommandTests
 {
     private readonly ITestOutputHelper _outputHelper;
 
-    public PriceCommandServiceTests(ITestOutputHelper outputHelper)
+    public RefreshItemPricesCommandTests(ITestOutputHelper outputHelper)
     {
         _outputHelper = outputHelper;
     }
 
     [Fact]
-    public async Task RefreshItemPricesTest()
+    public async Task RefreshItemPricesCommandTest()
     {
-        var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
-        serviceCollection.AddScoped<ListResponseCacheService>();
-        serviceCollection.AddScoped<PriceCommandService>();
-        serviceCollection.AddScoped<ListCommandService>();
+        // Arrange
+        var serviceCollection = await ServicesSetup.GetApiApplicationCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
 
         var dbContext = provider.GetRequiredService<XDbContext>();
@@ -81,21 +78,24 @@ public class PriceCommandServiceTests
         });
         await dbContext.SaveChangesAsync();
 
-        var itemsService = provider.GetRequiredService<ItemsService>();
-        var priceCommandService = provider.GetRequiredService<PriceCommandService>();
+        // Act
+        var mediator = provider.GetRequiredService<IMediator>();
+        var refreshItemPricesCommand = new RefreshItemPricesCommand();
         var sw = Stopwatch.StartNew();
-        var refreshItemPrices = await priceCommandService.RefreshItemPrices();
-        if (refreshItemPrices.IsError)
+        var result = await mediator.Send(refreshItemPricesCommand);
+
+        // Assert
+        if (result.IsError)
         {
-            Assert.Fail(refreshItemPrices.FirstError.Description);
+            Assert.Fail(result.FirstError.Description);
         }
 
         sw.Stop();
-
         var itemPricesCount = dbContext.Prices.Count();
         Assert.True(itemPricesCount > 0, $"{itemPricesCount} item prices added to database");
         _outputHelper.WriteLine($"{itemPricesCount} item prices added to database");
 
+        var itemsService = provider.GetRequiredService<ItemsService>();
         var allItems = itemsService.GetAll();
         if (allItems.IsError)
         {

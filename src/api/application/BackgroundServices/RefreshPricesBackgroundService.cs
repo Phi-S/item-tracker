@@ -1,4 +1,6 @@
-﻿using application.Commands;
+﻿using application.Commands.Items;
+using MediatR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -9,17 +11,29 @@ public class RefreshPricesBackgroundService : BackgroundService
 {
     private readonly ILogger<RefreshPricesBackgroundService> _logger;
     private readonly IServiceProvider _services;
+    private readonly bool _disableRefreshPriceBackgroundService;
 
     public RefreshPricesBackgroundService(
         ILogger<RefreshPricesBackgroundService> logger,
-        IServiceProvider services)
+        IServiceProvider services,
+        IConfiguration configuration)
     {
         _logger = logger;
         _services = services;
+        if (configuration.GetValue<bool>("DisableRefreshPricesBackgroundService"))
+        {
+            _disableRefreshPriceBackgroundService = false;
+            logger.LogWarning("DisableRefreshPricesBackgroundService is disabled");
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (_disableRefreshPriceBackgroundService)
+        {
+            return;
+        }
+
         const int executionHour = 20;
         const int sleepBetweenChecksInSec = 30;
 
@@ -45,9 +59,10 @@ public class RefreshPricesBackgroundService : BackgroundService
             _logger.LogInformation("Refreshing item prices");
             using (var scope = _services.CreateScope())
             {
-                var priceCommandService = scope.ServiceProvider.GetRequiredService<PriceCommandService>();
-                var refreshItemPrices = await priceCommandService.RefreshItemPrices();
-                if (refreshItemPrices.IsError)
+                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                var refreshItemPricesCommand = new RefreshItemPricesCommand();
+                var result = await mediator.Send(refreshItemPricesCommand, stoppingToken);
+                if (result.IsError)
                 {
                     retries++;
                     if (retries == 3)
@@ -66,6 +81,7 @@ public class RefreshPricesBackgroundService : BackgroundService
             retries = 0;
             executed = true;
         }
+
         _logger.LogWarning("RefreshPricesBackgroundService exited");
     }
 }

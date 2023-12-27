@@ -128,7 +128,7 @@ public class ItemListRepo
         return Task.FromResult(
             _dbContext.ItemActions.Where(action => action.List.Id == listId && action.CreatedUtc <= until));
     }
-    
+
     public Task<IQueryable<ItemListItemActionDbModel>> GetAllItemActionsForList(long listId)
     {
         return Task.FromResult(
@@ -141,8 +141,8 @@ public class ItemListRepo
         long unitPrice,
         int amount)
     {
-        if (string.IsNullOrWhiteSpace(actionType) ||
-            (actionType.Equals("B") == false && actionType.Equals("S") == false))
+        if (string.IsNullOrWhiteSpace(actionType) || (actionType.Equals("B") == false &&
+                                                      actionType.Equals("S") == false))
         {
             throw new Exception($"Action type \"{actionType}\" is not valid");
         }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using application.Cache;
 using ErrorOr;
 using infrastructure.Database.Models;
@@ -6,21 +6,24 @@ using infrastructure.Database.Repos;
 using infrastructure.ExchangeRates;
 using infrastructure.ItemPriceFolder;
 using infrastructure.Items;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace application.Commands;
+namespace application.Commands.Items;
 
-public class PriceCommandService
+public record RefreshItemPricesCommand : IRequest<ErrorOr<Success>>;
+
+public class RefreshItemPricesCommandHandler : IRequestHandler<RefreshItemPricesCommand, ErrorOr<Success>>
 {
-    private readonly ILogger<PriceCommandService> _logger;
+    private readonly ILogger<RefreshItemPricesCommandHandler> _logger;
     private readonly ItemsService _itemsService;
     private readonly ItemPriceService _itemPriceService;
     private readonly ExchangeRatesService _exchangeRatesService;
     private readonly UnitOfWork _unitOfWork;
     private readonly ListResponseCacheService _listResponseCacheService;
 
-    public PriceCommandService(
-        ILogger<PriceCommandService> logger,
+    public RefreshItemPricesCommandHandler(
+        ILogger<RefreshItemPricesCommandHandler> logger,
         ItemsService itemsService,
         ItemPriceService itemPriceService,
         ExchangeRatesService exchangeRatesService,
@@ -35,7 +38,7 @@ public class PriceCommandService
         _listResponseCacheService = listResponseCacheService;
     }
 
-    public async Task<ErrorOr<Success>> RefreshItemPrices()
+    public async Task<ErrorOr<Success>> Handle(RefreshItemPricesCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting to refresh item prices");
         var allItems = _itemsService.GetAll();
@@ -83,7 +86,7 @@ public class PriceCommandService
                     ItemPriceRefresh = priceRefresh
                 };
                 dbPrices.Add(dbPrice);
-            }));
+            }, cancellationToken));
         }
 
         await Task.WhenAll(formatPriceTasks);

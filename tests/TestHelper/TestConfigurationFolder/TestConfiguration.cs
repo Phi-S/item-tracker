@@ -20,8 +20,7 @@ public static class TestConfiguration
 
     public static IConfiguration GetApiAppSettingsTest(string key, string? value)
     {
-        return GetApiAppSettingsTest(new List<KeyValuePair<string, string?>>
-            { new(key, value) });
+        return GetApiAppSettingsTest([new KeyValuePair<string, string?>(key, value)]);
     }
 
     public static IConfiguration GetApiAppSettingsTest(List<KeyValuePair<string, string?>> memorySettings)

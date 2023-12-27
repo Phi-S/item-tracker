@@ -1,67 +1,57 @@
-﻿using ErrorOr;
+using application.Cache;
+using ErrorOr;
 using infrastructure.Database.Models;
 using infrastructure.Database.Repos;
 using infrastructure.ExchangeRates;
+using infrastructure.Items;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using shared.Currencies;
 using shared.Models.ListResponse;
 
-namespace application.Commands.List;
+namespace application.Queries;
 
-public partial class ListCommandService
+public record GetListQuery(string? UserId, string ListUrl) : IRequest<ErrorOr<ListResponse>>;
+
+public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse>>
 {
-    public async Task<ErrorOr<List<ListResponse>>> GetUserLists(string? userId)
+    private readonly UnitOfWork _unitOfWork;
+    private readonly ListResponseCacheService _listResponseCacheService;
+    private readonly ItemsService _itemsService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+
+    public GetListHandler(
+        UnitOfWork unitOfWork,
+        ListResponseCacheService listResponseCacheService,
+        ItemsService itemsService,
+        IServiceScopeFactory serviceScopeFactory)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            return Error.Unauthorized(description: "UserId not found");
-        }
-
-        var result = new List<ListResponse>();
-        var lists = await _unitOfWork.ItemListRepo.GetAllListsForUser(userId);
-        foreach (var list in lists)
-        {
-            var cacheResponse = _listResponseCacheService.GetListResponse(list.Url);
-            if (cacheResponse.IsError)
-            {
-                var listResponse = await GetListResponse(list.Url);
-                if (listResponse.IsError)
-                {
-                    return listResponse.FirstError;
-                }
-
-                _listResponseCacheService.UpdateCache(listResponse.Value);
-                result.Add(listResponse.Value);
-            }
-            else
-            {
-                result.Add(cacheResponse.Value);
-            }
-        }
-
-        return result;
+        _unitOfWork = unitOfWork;
+        _listResponseCacheService = listResponseCacheService;
+        _itemsService = itemsService;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
-    public async Task<ErrorOr<ListResponse>> GetList(string? userId, string listUrl)
+    public async Task<ErrorOr<ListResponse>> Handle(GetListQuery request, CancellationToken cancellationToken)
     {
-        var list = await _unitOfWork.ItemListRepo.GetListByUrl(listUrl);
+        var list = await _unitOfWork.ItemListRepo.GetListByUrl(request.ListUrl);
         if (list.IsError)
         {
             return list.FirstError;
         }
 
-        if (list.Value.Public == false && list.Value.UserId.Equals(userId) == false)
+        if (list.Value.Public == false && list.Value.UserId.Equals(request.UserId) == false)
         {
             return Error.Unauthorized(description: "You dont have access to this list");
         }
 
-        var cachedListResponse = _listResponseCacheService.GetListResponse(listUrl);
+        var cachedListResponse = _listResponseCacheService.GetListResponse(request.ListUrl);
         if (cachedListResponse.IsError == false)
         {
             return cachedListResponse.Value;
         }
 
-        var listResponse = await GetListResponse(listUrl);
+        var listResponse = await GetListResponse(request.ListUrl);
         if (listResponse.IsError)
         {
             return listResponse.FirstError;
@@ -71,7 +61,7 @@ public partial class ListCommandService
         return listResponse;
     }
 
-    public async Task<ErrorOr<ListResponse>> GetListResponse(string listUrl, int snapshotsForLastDays = 30)
+    private async Task<ErrorOr<ListResponse>> GetListResponse(string listUrl, int snapshotsForLastDays = 30)
     {
         var snapshotStartDate = DateTime.UtcNow.Subtract(TimeSpan.FromDays(snapshotsForLastDays));
 
@@ -88,6 +78,21 @@ public partial class ListCommandService
         #endregion
 
         var priceRefreshes = await _unitOfWork.ItemPriceRepo.GetSince(snapshotStartDate);
+        if (priceRefreshes.Count == 0)
+        {
+            var latestPriceRefresh = await _unitOfWork.ItemPriceRepo.GetLatest();
+            if (latestPriceRefresh.IsError)
+            {
+                if (latestPriceRefresh.FirstError != Error.NotFound())
+                {
+                    return latestPriceRefresh.FirstError;
+                }
+            }
+            else
+            {
+                priceRefreshes.Add(latestPriceRefresh.Value);
+            }
+        }
 
         #region CreateSnapshotDays
 
@@ -206,7 +211,7 @@ public partial class ListCommandService
         return listResponse;
     }
 
-    public record ItemSnapshotForDay(
+    private record ItemSnapshotForDay(
         long TotalInvestedCapital,
         long TotalItemCount,
         long SalesValue,
@@ -286,8 +291,7 @@ public partial class ListCommandService
                     var closestPriceRefresh = priceRefreshes
                         .Where(priceRefresh =>
                             DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshotDay)
-                        .OrderBy(priceRefresh => priceRefresh.CreatedUtc)
-                        .Last();
+                        .MaxBy(priceRefresh => priceRefresh.CreatedUtc);
 
                     var snap = await GetItemSnapshotForDay(
                         itemCount,
@@ -362,8 +366,7 @@ public partial class ListCommandService
                 var closestPriceRefresh = priceRefreshes
                     .Where(priceRefresh =>
                         DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshotDay)
-                    .OrderBy(priceRefresh => priceRefresh.CreatedUtc)
-                    .Last();
+                    .MaxBy(priceRefresh => priceRefresh.CreatedUtc);
 
                 var snap = await GetItemSnapshotForDay(
                     itemCount,
@@ -387,9 +390,7 @@ public partial class ListCommandService
             }
         }
 
-        var latestPriceRefresh = priceRefreshes
-            .OrderBy(priceRefresh => priceRefresh.CreatedUtc)
-            .Last();
+        var latestPriceRefresh = priceRefreshes.MaxBy(priceRefresh => priceRefresh.CreatedUtc);
         var mostCurrentSnap = await GetItemSnapshotForDay(
             itemCount,
             buyPrices,
@@ -409,23 +410,31 @@ public partial class ListCommandService
         #endregion
 
         #region CreateListItemResponse
-        
-        var latestPricesResult = await GetPrice(list.Currency, itemId, latestPriceRefresh);
-        if (latestPricesResult.IsError)
+
+        var averageBuyPrice = buyPrices.Count == 0 ? 0 : buyPrices.Average();
+        var capitalInvested = gotSales ? (long)Math.Round(averageBuyPrice * itemCount, 0) : buyPrices.Sum();
+
+        long? steamPrice = null;
+        long? buff163Price = null;
+
+        if (latestPriceRefresh is not null)
         {
-            return latestPricesResult.FirstError;
+            var latestPricesResult = await GetPrice(list.Currency, itemId, latestPriceRefresh);
+            if (latestPricesResult.IsError)
+            {
+                return latestPricesResult.FirstError;
+            }
+
+            var latestPrice = latestPricesResult.Value;
+            steamPrice = latestPrice.steamPrice;
+            buff163Price = latestPrice.buff163Price;
         }
 
-        var latestPrice = latestPricesResult.Value;
+        var steamPerformancePercent = GetPerformancePercent(steamPrice, averageBuyPrice);
+        var buff163PerformancePercent = GetPerformancePercent(buff163Price, averageBuyPrice);
 
-        var averageBuyPrice = buyPrices.Count == 0 ? 0 : (long)Math.Round(buyPrices.Average(), 0);
-        var capitalInvested = gotSales ? averageBuyPrice * itemCount : buyPrices.Sum();
-
-        var steamPerformancePercent = GetPerformancePercent(latestPrice.steamPrice, averageBuyPrice);
-        var buff163PerformancePercent = GetPerformancePercent(latestPrice.buff163Price, averageBuyPrice);
-
-        var steamPerformanceValue = GetPerformanceValue(latestPrice.steamPrice, averageBuyPrice, itemCount);
-        var buff163PerformanceValue = GetPerformanceValue(latestPrice.buff163Price, averageBuyPrice, itemCount);
+        var steamPerformanceValue = GetPerformanceValue(steamPrice, averageBuyPrice, itemCount);
+        var buff163PerformanceValue = GetPerformanceValue(buff163Price, averageBuyPrice, itemCount);
 
         var itemResult = _itemsService.GetById(itemId);
         if (itemResult.IsError)
@@ -440,9 +449,9 @@ public partial class ListCommandService
             item.Image,
             itemCount,
             capitalInvested,
-            averageBuyPrice,
-            latestPrice.steamPrice,
-            latestPrice.buff163Price,
+            (long)Math.Round(averageBuyPrice, 0),
+            steamPrice,
+            buff163Price,
             steamPerformancePercent,
             buff163PerformancePercent,
             steamPerformanceValue,
@@ -460,7 +469,7 @@ public partial class ListCommandService
     private async Task<ErrorOr<ItemSnapshotForDay>> GetItemSnapshotForDay(
         int itemCount,
         List<long> buyPrices,
-        ItemPriceRefreshDbModel closestPriceRefresh,
+        ItemPriceRefreshDbModel? closestPriceRefresh,
         string currency,
         long itemId,
         long salesValue,
@@ -470,6 +479,18 @@ public partial class ListCommandService
         if (buyPrices.Count > 0 && itemCount > 0)
         {
             investedCapitalForItem = (long)Math.Round(buyPrices.Average() * itemCount, 0);
+        }
+
+        if (closestPriceRefresh is null)
+        {
+            return new ItemSnapshotForDay(
+                investedCapitalForItem,
+                itemCount,
+                salesValue,
+                salesProfit,
+                null,
+                null
+            );
         }
 
         var getPriceResult = await GetPrice(currency, itemId, closestPriceRefresh);
@@ -539,20 +560,20 @@ public partial class ListCommandService
         );
     }
 
-    private static double? GetPerformancePercent(long? currentPrice, long buyPrice)
+    private static double? GetPerformancePercent(long? current, double old)
     {
-        if (currentPrice is null)
+        if (current is null || old == 0)
         {
             return null;
         }
 
-        var performance = Math.Round((double)currentPrice / buyPrice * 100 - 100, 2);
+        var performance = Math.Round((double)current / old * 100 - 100, 2);
         return double.IsInfinity(performance) ? null : performance;
     }
 
-    private static long? GetPerformanceValue(long? currentPrice, long buyPrice, int itemCount)
+    private static long? GetPerformanceValue(long? current, double old, int itemCount)
     {
-        return (currentPrice - buyPrice) * itemCount;
+        return (long?)((current - old) * itemCount);
     }
 
     private async Task<ErrorOr<(long? steamPrice, long? buff163Price)>> GetPrice(

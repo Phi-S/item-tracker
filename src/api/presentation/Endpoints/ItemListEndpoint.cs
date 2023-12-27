@@ -1,5 +1,7 @@
 ﻿using application.Commands.List;
+using application.Queries;
 using ErrorOr;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using presentation.Extension;
 using shared.Models;
@@ -19,49 +21,53 @@ public static class ItemListEndpoint
 
         group.MapGet("/all", async (
             HttpContext context,
-            ListCommandService listCommandService) =>
+            IMediator mediator) =>
         {
             var userId = context.User.Id();
-            var lists = await listCommandService.GetUserLists(userId);
-            if (lists.IsError)
+            var getAllListsForUserQuery = new GetAllListsForUserQuery(userId);
+            var listResponses = await mediator.Send(getAllListsForUserQuery);
+            if (listResponses.IsError)
             {
-                return lists.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(lists.FirstError.Description)
-                    : Results.Extensions.InternalServerError(lists.FirstError.Description);
+                return listResponses.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(listResponses.FirstError.Description)
+                    : Results.Extensions.InternalServerError(listResponses.FirstError.Description);
             }
 
-            return Results.Ok(lists.Value);
+            return Results.Ok(listResponses.Value);
         });
 
         group.MapPost("/new", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             [FromBody] NewListModel newListModel) =>
         {
             var userId = context.User.Id();
-            var newList = await listCommandService.New(userId, newListModel);
-            if (newList.IsError)
+            var createNewListCommand = new CreateNewListCommand(userId, newListModel.ListName,
+                newListModel.ListDescription, newListModel.Currency, newListModel.Public);
+            var newListUrl = await mediator.Send(createNewListCommand);
+            if (newListUrl.IsError)
             {
-                return newList.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(newList.FirstError.Description)
-                    : Results.Extensions.InternalServerError(newList.FirstError.Description);
+                return newListUrl.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(newListUrl.FirstError.Description)
+                    : Results.Extensions.InternalServerError(newListUrl.FirstError.Description);
             }
 
-            return Results.Text(newList.Value);
+            return Results.Text(newListUrl.Value);
         });
 
         group.MapDelete("/delete-action", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             [FromQuery] long actionId) =>
         {
             var userId = context.User.Id();
-            var sellItem = await listCommandService.DeleteItemAction(userId, actionId);
-            if (sellItem.IsError)
+            var deleteItemActionCommand = new DeleteItemActionCommand(userId, actionId);
+            var result = await mediator.Send(deleteItemActionCommand);
+            if (result.IsError)
             {
-                return sellItem.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(sellItem.FirstError.Description)
-                    : Results.Extensions.InternalServerError(sellItem.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
@@ -69,28 +75,12 @@ public static class ItemListEndpoint
 
         group.MapGet("{url}", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url) =>
         {
             var userId = context.User.Id();
-            var listResponse = await listCommandService.GetList(userId, url);
-            if (listResponse.IsError)
-            {
-                return listResponse.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(listResponse.FirstError.Description)
-                    : Results.Extensions.InternalServerError(listResponse.FirstError.Description);
-            }
-
-            return Results.Ok(listResponse.Value);
-        }).AllowAnonymous();
-
-        group.MapGet("{url}/history", async (
-            HttpContext context,
-            ListCommandService listCommandService,
-            string url) =>
-        {
-            var userId = context.User.Id();
-            var listResponse = await listCommandService.GetListResponse(url);
+            var query = new GetListQuery(userId, url);
+            var listResponse = await mediator.Send(query);
             if (listResponse.IsError)
             {
                 return listResponse.FirstError.Type == ErrorType.Unauthorized
@@ -103,16 +93,17 @@ public static class ItemListEndpoint
 
         group.MapDelete("{url}/delete", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url) =>
         {
             var userId = context.User.Id();
-            var buyItem = await listCommandService.DeleteList(userId, url);
-            if (buyItem.IsError)
+            var deleteListCommand = new DeleteListCommand(userId, url);
+            var result = await mediator.Send(deleteListCommand);
+            if (result.IsError)
             {
-                return buyItem.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(buyItem.FirstError.Description)
-                    : Results.Extensions.InternalServerError(buyItem.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
@@ -120,19 +111,20 @@ public static class ItemListEndpoint
 
         group.MapPost("{url}/buy-item", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url,
             [FromQuery] long itemId,
             [FromQuery] long unitPrice,
             [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
-            var buyItem = await listCommandService.BuyItem(userId, url, itemId, unitPrice, amount);
-            if (buyItem.IsError)
+            var addItemActionBuyCommand = new AddItemActionBuyCommand(userId, url, itemId, unitPrice, amount);
+            var result = await mediator.Send(addItemActionBuyCommand);
+            if (result.IsError)
             {
-                return buyItem.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(buyItem.FirstError.Description)
-                    : Results.Extensions.InternalServerError(buyItem.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
@@ -140,19 +132,20 @@ public static class ItemListEndpoint
 
         group.MapPost("{url}/sell-item", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url,
             [FromQuery] long itemId,
             [FromQuery] long unitPrice,
             [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
-            var sellItem = await listCommandService.SellItem(userId, url, itemId, unitPrice, amount);
-            if (sellItem.IsError)
+            var addItemActionSellCommand = new AddItemActionSellCommand(userId, url, itemId, unitPrice, amount);
+            var result = await mediator.Send(addItemActionSellCommand);
+            if (result.IsError)
             {
-                return sellItem.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(sellItem.FirstError.Description)
-                    : Results.Extensions.InternalServerError(sellItem.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
@@ -160,17 +153,18 @@ public static class ItemListEndpoint
 
         group.MapPut("{url}/update-name", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url,
             [FromQuery] string newName) =>
         {
             var userId = context.User.Id();
-            var updateResult = await listCommandService.UpdateListName(userId, url, newName);
-            if (updateResult.IsError)
+            var updateListNameCommand = new UpdateListNameCommand(userId, url, newName);
+            var result = await mediator.Send(updateListNameCommand);
+            if (result.IsError)
             {
-                return updateResult.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(updateResult.FirstError.Description)
-                    : Results.Extensions.InternalServerError(updateResult.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
@@ -178,17 +172,18 @@ public static class ItemListEndpoint
 
         group.MapPut("{url}/update-description", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url,
             [FromQuery] string newDescription) =>
         {
             var userId = context.User.Id();
-            var updateResult = await listCommandService.UpdateListDescription(userId, url, newDescription);
-            if (updateResult.IsError)
+            var updateListDescriptionCommand = new UpdateListDescriptionCommand(userId, url, newDescription);
+            var result = await mediator.Send(updateListDescriptionCommand);
+            if (result.IsError)
             {
-                return updateResult.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(updateResult.FirstError.Description)
-                    : Results.Extensions.InternalServerError(updateResult.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
@@ -196,17 +191,18 @@ public static class ItemListEndpoint
 
         group.MapPut("{url}/update-public", async (
             HttpContext context,
-            ListCommandService listCommandService,
+            IMediator mediator,
             string url,
             [FromQuery] bool newPublic) =>
         {
             var userId = context.User.Id();
-            var updateResult = await listCommandService.UpdateListPublic(userId, url, newPublic);
-            if (updateResult.IsError)
+            var updateListPublicCommand = new UpdateListPublicCommand(userId, url, newPublic);
+            var result = await mediator.Send(updateListPublicCommand);
+            if (result.IsError)
             {
-                return updateResult.FirstError.Type == ErrorType.Unauthorized
-                    ? Results.Extensions.Unauthorized(updateResult.FirstError.Description)
-                    : Results.Extensions.InternalServerError(updateResult.FirstError.Description);
+                return result.FirstError.Type == ErrorType.Unauthorized
+                    ? Results.Extensions.Unauthorized(result.FirstError.Description)
+                    : Results.Extensions.InternalServerError(result.FirstError.Description);
             }
 
             return Results.Ok();
