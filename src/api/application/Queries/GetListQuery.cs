@@ -63,8 +63,6 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
 
     private async Task<ErrorOr<ListResponse>> GetListResponse(string listUrl, int snapshotsForLastDays = 30)
     {
-        var snapshotStartDate = DateTime.UtcNow.Subtract(TimeSpan.FromDays(snapshotsForLastDays));
-
         #region GetList
 
         var listResult = await _unitOfWork.ItemListRepo.GetListByUrl(listUrl);
@@ -77,6 +75,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
 
         #endregion
 
+        var snapshotStartDate = DateTime.UtcNow.Subtract(TimeSpan.FromDays(snapshotsForLastDays));
         var priceRefreshes = await _unitOfWork.ItemPriceRepo.GetSince(snapshotStartDate);
         if (priceRefreshes.Count == 0)
         {
@@ -247,17 +246,18 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         // skip to snapshot when the list was created
         while (true)
         {
-            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0, null, null));
             if (snapshotDaysEnumerator.MoveNext() == false)
             {
                 noMoreSnapshotDaysLeft = true;
                 break;
             }
 
-            if (snapshotDaysEnumerator.Current.Equals(listCreationDay))
+            if (snapshotDaysEnumerator.Current >= listCreationDay)
             {
                 break;
             }
+
+            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0, null, null));
         }
 
         var actions = itemWithActions.OrderBy(action => action.CreatedUtc).ToList();
