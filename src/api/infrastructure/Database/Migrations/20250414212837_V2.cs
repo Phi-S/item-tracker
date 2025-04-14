@@ -15,6 +15,14 @@ namespace infrastructure.Database.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropColumn(
+                name: "Buff163PricesLastModified",
+                table: "PricesRefresh");
+
+            migrationBuilder.DropColumn(
+                name: "Buff163PriceCentsUsd",
+                table: "Prices");
+            
             migrationBuilder.AddColumn<string>(
                 name: "ItemName",
                 table: "Prices",
