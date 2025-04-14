@@ -113,7 +113,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             new List<Task<ErrorOr<(ListItemResponse listItemResponse, Dictionary<DateOnly, ItemSnapshotForDay>
                 snapshotsResult)>>>();
         var actions = await _unitOfWork.ItemListRepo.GetAllItemActionsForList(list.Id);
-        var itemIdsWithActionsGrouping = actions.GroupBy(action => action.ItemId).ToList();
+        var itemIdsWithActionsGrouping = actions.GroupBy(action => action.ItemName).ToList();
         foreach (var itemIdsWithActions in itemIdsWithActionsGrouping)
         {
             processItemsTasks.Add(
@@ -215,16 +215,15 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         long TotalItemCount,
         long SalesValue,
         long Profit,
-        long? SteamValueForOne,
-        long? Buff163ValueForOne
+        long? SteamValueForOne
     );
 
     private async
         Task<ErrorOr<(ListItemResponse listItemResponse, Dictionary<DateOnly, ItemSnapshotForDay> snapshotsResult)>>
         GetListItemResponseWithItemSnapshots(
             IEnumerable<DateOnly> snapshotDays,
-            ItemListDbModel list,
-            IGrouping<long, ItemListItemActionDbModel> itemWithActions,
+            ListDbModel list,
+            IGrouping<string, ListActionDbModel> itemWithActions,
             IReadOnlyCollection<ItemPriceRefreshDbModel> priceRefreshes)
     {
         var itemId = itemWithActions.Key;
@@ -236,7 +235,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         long salesProfit = 0;
         var gotSales = false;
 
-        var listCreationDay = DateOnly.FromDateTime(list.CreatedUtc);
+        var listCreationDay = DateOnly.FromDateTime(list.CreatedAt);
         snapshotDays = snapshotDays.Order().ToList();
         using var snapshotDaysEnumerator = snapshotDays.GetEnumerator();
 
@@ -257,10 +256,10 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 break;
             }
 
-            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0, null, null));
+            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0,  null));
         }
 
-        var actions = itemWithActions.OrderBy(action => action.CreatedUtc).ToList();
+        var actions = itemWithActions.OrderBy(action => action.CreatedAt).ToList();
         foreach (var action in actions)
         {
             // TODO: check if all actions belong to the given list. Repo need include so action.list is populated. Is it worth?
@@ -272,7 +271,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 action.Action,
                 action.Amount,
                 action.UnitPrice,
-                action.CreatedUtc
+                action.CreatedAt
             );
             itemActionResponses.Add(actionResponse);
 
@@ -284,14 +283,14 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             // crete snapshot for all actions until the current action
             if (noMoreSnapshotDaysLeft == false)
             {
-                var actionCreationDayUtc = DateOnly.FromDateTime(action.CreatedUtc);
+                var actionCreationDayUtc = DateOnly.FromDateTime(action.CreatedAt);
                 var currentSnapshotDay = snapshotDaysEnumerator.Current;
                 while (currentSnapshotDay < actionCreationDayUtc)
                 {
                     var closestPriceRefresh = priceRefreshes
                         .Where(priceRefresh =>
-                            DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshotDay)
-                        .MaxBy(priceRefresh => priceRefresh.CreatedUtc);
+                            DateOnly.FromDateTime(priceRefresh.CreatedAt) <= currentSnapshotDay)
+                        .MaxBy(priceRefresh => priceRefresh.CreatedAt);
 
                     var snap = await GetItemSnapshotForDay(
                         itemCount,
@@ -365,8 +364,8 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 var currentSnapshotDay = snapshotDaysEnumerator.Current;
                 var closestPriceRefresh = priceRefreshes
                     .Where(priceRefresh =>
-                        DateOnly.FromDateTime(priceRefresh.CreatedUtc) <= currentSnapshotDay)
-                    .MaxBy(priceRefresh => priceRefresh.CreatedUtc);
+                        DateOnly.FromDateTime(priceRefresh.CreatedAt) <= currentSnapshotDay)
+                    .MaxBy(priceRefresh => priceRefresh.CreatedAt);
 
                 var snap = await GetItemSnapshotForDay(
                     itemCount,
@@ -390,7 +389,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             }
         }
 
-        var latestPriceRefresh = priceRefreshes.MaxBy(priceRefresh => priceRefresh.CreatedUtc);
+        var latestPriceRefresh = priceRefreshes.MaxBy(priceRefresh => priceRefresh.CreatedAt);
         var mostCurrentSnap = await GetItemSnapshotForDay(
             itemCount,
             buyPrices,
@@ -425,9 +424,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 return latestPricesResult.FirstError;
             }
 
-            var latestPrice = latestPricesResult.Value;
-            steamPrice = latestPrice.steamPrice;
-            buff163Price = latestPrice.buff163Price;
+            steamPrice = latestPricesResult.Value;
         }
 
         var steamPerformancePercent = GetPerformancePercent(steamPrice, averageBuyPrice);
@@ -436,7 +433,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         var steamPerformanceValue = GetPerformanceValue(steamPrice, averageBuyPrice, itemCount);
         var buff163PerformanceValue = GetPerformanceValue(buff163Price, averageBuyPrice, itemCount);
 
-        var itemResult = _itemsService.GetById(itemId);
+        var itemResult = _itemsService.GetByName(itemId);
         if (itemResult.IsError)
         {
             throw new Exception("ItemId is not valid");
@@ -471,7 +468,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         List<long> buyPrices,
         ItemPriceRefreshDbModel? closestPriceRefresh,
         string currency,
-        long itemId,
+        string itemName,
         long salesValue,
         long salesProfit)
     {
@@ -488,25 +485,23 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 itemCount,
                 salesValue,
                 salesProfit,
-                null,
                 null
             );
         }
 
-        var getPriceResult = await GetPrice(currency, itemId, closestPriceRefresh);
+        var getPriceResult = await GetPrice(currency, itemName, closestPriceRefresh);
         if (getPriceResult.IsError)
         {
             return getPriceResult.FirstError;
         }
 
-        var (steamPrice, buff163Price) = getPriceResult.Value;
+        var steamPrice = getPriceResult.Value;
         var snap = new ItemSnapshotForDay(
             investedCapitalForItem,
             itemCount,
             salesValue,
             salesProfit,
-            steamPrice,
-            buff163Price
+            steamPrice
         );
         return snap;
     }
@@ -542,11 +537,6 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             {
                 steamValue += snapshotForItem.SteamValueForOne * snapshotForItem.TotalItemCount;
             }
-
-            if (snapshotForItem.Buff163ValueForOne is not null)
-            {
-                buff163Value += snapshotForItem.Buff163ValueForOne * snapshotForItem.TotalItemCount;
-            }
         }
 
         return new ListSnapshotResponse(
@@ -576,9 +566,9 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         return (long?)((current - old) * itemCount);
     }
 
-    private async Task<ErrorOr<(long? steamPrice, long? buff163Price)>> GetPrice(
+    private async Task<ErrorOr<long?>> GetPrice(
         string currency,
-        long itemId,
+        string itemName,
         ItemPriceRefreshDbModel priceRefresh
     )
     {
@@ -586,12 +576,12 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         var unitOfWork = scope.ServiceProvider.GetRequiredService<UnitOfWork>();
 
         var priceForItemIdResult =
-            await unitOfWork.ItemPriceRepo.GetPriceForItem(itemId, priceRefresh);
+            await unitOfWork.ItemPriceRepo.GetPriceForItem(itemName, priceRefresh);
         if (priceForItemIdResult.IsError)
         {
             if (priceForItemIdResult.FirstError.Type == ErrorType.NotFound)
             {
-                return (null, null);
+                return (long?)null;
             }
 
             return priceForItemIdResult.FirstError;
@@ -617,26 +607,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 return Error.Failure(description: $"Currency \"{currency}\" is not implemented");
             }
         }
-
-        long? buff163Value = null;
-        if (priceForItemId.Buff163PriceCentsUsd is not null)
-        {
-            if (currency.Equals(CurrenciesConstants.USD))
-            {
-                buff163Value = priceForItemId.Buff163PriceCentsUsd.Value;
-            }
-            else if (currency.Equals(CurrenciesConstants.EURO))
-            {
-                buff163Value = ExchangeRateHelper.ApplyExchangeRate(
-                    priceForItemId.Buff163PriceCentsUsd.Value,
-                    priceRefresh.UsdToEurExchangeRate);
-            }
-            else
-            {
-                return Error.Failure(description: $"Currency \"{currency}\" is not implemented");
-            }
-        }
-
-        return (steamValue, buff163Value);
+        
+        return steamValue;
     }
 }

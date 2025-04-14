@@ -80,9 +80,8 @@ public class RefreshItemPricesCommandHandler : IRequestHandler<RefreshItemPrices
 
                 var dbPrice = new ItemPriceDbModel
                 {
-                    ItemId = item.Id,
+                    ItemName = item.Name,
                     SteamPriceCentsUsd = steamPrice is null ? null : (int)(steamPrice.Value * 100),
-                    Buff163PriceCentsUsd = buff163Price is null ? null : (int)(buff163Price.Value * 100),
                     ItemPriceRefresh = priceRefresh
                 };
                 dbPrices.Add(dbPrice);

@@ -1,0 +1,11 @@
+{
+    "configurations": [
+      {
+          "type": "dotnet-launch-settings",
+          "name": "Dotnet configuration",
+          "projectPath": "item-tracker.sln",
+          "profileName": "",
+      },
+      
+    ]
+}

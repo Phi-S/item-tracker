@@ -28,7 +28,7 @@ public class GetListQueryTests
         var userId = RandomHelper.RandomString();
         var listUrl = RandomHelper.RandomString();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             UserId = userId,
             Name = RandomHelper.RandomString(),
@@ -37,99 +37,99 @@ public class GetListQueryTests
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "B",
             UnitPrice = 1,
             Amount = 2,
-            CreatedUtc = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "S",
             UnitPrice = 2,
             Amount = 2,
-            CreatedUtc = DateTime.UtcNow.AddSeconds(1)
+            CreatedAt = DateTime.UtcNow.AddSeconds(1)
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 2,
             Action = "B",
             UnitPrice = 3,
             Amount = 4,
-            CreatedUtc = DateTime.UtcNow.AddSeconds(1)
+            CreatedAt = DateTime.UtcNow.AddSeconds(1)
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 2,
             Action = "B",
             UnitPrice = 4,
             Amount = 5,
-            CreatedUtc = DateTime.UtcNow.AddSeconds(2)
+            CreatedAt = DateTime.UtcNow.AddSeconds(2)
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 2,
             Action = "S",
             UnitPrice = 1,
             Amount = 2,
-            CreatedUtc = DateTime.UtcNow.AddSeconds(5)
+            CreatedAt = DateTime.UtcNow.AddSeconds(5)
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 3,
             Action = "B",
             UnitPrice = 1,
             Amount = 2,
-            CreatedUtc = default
+            CreatedAt = default
         });
 
         var priceRefresh = await dbContext.PricesRefresh.AddAsync(new ItemPriceRefreshDbModel
         {
             UsdToEurExchangeRate = 2,
-            SteamPricesLastModified = default,
+            SteamPricesLastModifiedAt = default,
             Buff163PricesLastModified = default,
-            CreatedUtc = default
+            CreatedAt = default
         });
 
         await dbContext.Prices.AddAsync(new ItemPriceDbModel
         {
             ItemId = 1,
+            ItemName = "item-1",
             SteamPriceCentsUsd = 1,
-            Buff163PriceCentsUsd = 2,
             ItemPriceRefresh = priceRefresh.Entity
         });
 
         await dbContext.Prices.AddAsync(new ItemPriceDbModel
         {
             ItemId = 2,
+            ItemName = "item-2",
             SteamPriceCentsUsd = 3,
-            Buff163PriceCentsUsd = 4,
             ItemPriceRefresh = priceRefresh.Entity
         });
 
         await dbContext.Prices.AddAsync(new ItemPriceDbModel
         {
             ItemId = 3,
+            ItemName = "item-3",
             SteamPriceCentsUsd = 5,
-            Buff163PriceCentsUsd = 6,
             ItemPriceRefresh = priceRefresh.Entity
         });
 

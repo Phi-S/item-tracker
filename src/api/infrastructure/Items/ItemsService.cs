@@ -29,12 +29,12 @@ public class ItemsService
         return _itemList;
     }
 
-    public ErrorOr<ItemModel> GetById(long itemId)
+    public ErrorOr<ItemModel> GetByName(string itemName)
     {
-        var item = _itemList.FirstOrDefault(model => model.Id == itemId);
+        var item = _itemList.FirstOrDefault(model => model.Name == itemName);
         if (item is null)
         {
-            return Error.NotFound(description: $"Failed to find item with the id {itemId}");
+            return Error.NotFound(description: $"Failed to find item with the id {itemName}");
         }
 
         return item;

@@ -12,17 +12,17 @@ namespace presentation.Components.Custom;
 
 public class ListDisplayRazor : ComponentBase
 {
-    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
-    [Inject] public NavigationManager NavigationManager { get; set; } = default!;
-    [Inject] public IJSRuntime JsRuntime { get; set; } = default!;
-    [Inject] protected ToastService ToastService { get; set; } = default!;
-    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = default!;
+    [Inject] public CognitoAuthenticationStateProvider AuthenticationStateProvider { get; set; } = null!;
+    [Inject] public NavigationManager NavigationManager { get; set; } = null!;
+    [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
+    [Inject] protected ToastService ToastService { get; set; } = null!;
+    [Inject] public ItemTrackerApiService ItemTrackerApiService { get; set; } = null!;
 
-    [Parameter] [EditorRequired] public ListResponse List { get; set; } = default!;
+    [Parameter] [EditorRequired] public ListResponse List { get; set; } = null!;
     [Parameter] public bool DisplayGoToListButton { get; set; } = true;
 
-    protected ConfirmDialog ConfirmDialogRef { get; set; } = default!;
-    protected LineChart LineChartRef { get; set; } = default!;
+    protected ConfirmDialog ConfirmDialogRef { get; set; } = null!;
+    protected LineChart LineChartRef { get; set; } = null!;
 
     protected bool IsOwnList { get; private set; }
 
@@ -44,9 +44,8 @@ public class ListDisplayRazor : ComponentBase
         var timezoneOffsetH = await JsRuntime.GetBrowserTimezoneOffsetInH();
 
         var dataLabels = new List<string>();
-        var steamPriceValues = new List<double>();
-        var buffPriceValues = new List<double>();
-        var investedCapitalValues = new List<double>();
+        var steamPriceValues = new List<double?>();
+        var investedCapitalValues = new List<double?>();
 
         if (List.Snapshots.Count != 0)
         {
@@ -57,9 +56,6 @@ public class ListDisplayRazor : ComponentBase
                 steamPriceValues.Add(listValue.SteamSellPrice is null
                     ? 0
                     : CurrencyHelper.ToDouble(listResponse.Currency, listValue.SteamSellPrice.Value));
-                buffPriceValues.Add(listValue.Buff163SellPrice is null
-                    ? 0
-                    : CurrencyHelper.ToDouble(listResponse.Currency, listValue.Buff163SellPrice.Value));
                 investedCapitalValues.Add(CurrencyHelper.ToDouble(listResponse.Currency, listValue.InvestedCapital));
             }
         }
@@ -67,7 +63,6 @@ public class ListDisplayRazor : ComponentBase
         {
             dataLabels.Add(DateTime.UtcNow.AddHours(timezoneOffsetH).ToString("yyyy-MM-dd HH:mm:ss"));
             steamPriceValues.Add(0);
-            buffPriceValues.Add(0);
             investedCapitalValues.Add(0);
         }
 
@@ -77,9 +72,9 @@ public class ListDisplayRazor : ComponentBase
             {
                 Label = "Invested capital",
                 Data = investedCapitalValues,
-                BorderColor = new List<string> { "#b3bab5" },
-                BorderWidth = new List<double> { 2 },
-                HoverBorderWidth = new List<double> { 4 },
+                BorderColor = "#b3bab5" ,
+                BorderWidth = 2 ,
+                HoverBorderWidth =  4 ,
                 PointBackgroundColor = ["#b3bab5"],
                 PointRadius = [5],
                 PointHoverRadius = [8]
@@ -88,21 +83,10 @@ public class ListDisplayRazor : ComponentBase
             {
                 Label = "Steam price",
                 Data = steamPriceValues,
-                BorderColor = new List<string> { "#fcba03" },
-                BorderWidth = new List<double> { 2 },
-                HoverBorderWidth = new List<double> { 4 },
+                BorderColor =  "#fcba03" ,
+                BorderWidth =  2 ,
+                HoverBorderWidth =4 ,
                 PointBackgroundColor = ["#fcba03"],
-                PointRadius = [5],
-                PointHoverRadius = [8]
-            },
-            new LineChartDataset
-            {
-                Label = "Buff price",
-                Data = buffPriceValues,
-                BorderColor = new List<string> { "#4842f5" },
-                BorderWidth = new List<double> { 2 },
-                HoverBorderWidth = new List<double> { 4 },
-                PointBackgroundColor = ["#4842f5"],
                 PointRadius = [5],
                 PointHoverRadius = [8]
             }
@@ -161,7 +145,7 @@ public class ListDisplayRazor : ComponentBase
 
         await JsRuntime.InvokeVoidAsync(
             "window.blazorChart.line.initialize",
-            LineChartRef.ElementId!,
+            LineChartRef.Element.Id,
             "line",
             data,
             diagramData.lineChartOptionsExtension,
@@ -180,7 +164,7 @@ public class ListDisplayRazor : ComponentBase
         };
         await JsRuntime.InvokeVoidAsync(
             "window.blazorChart.line.update",
-            LineChartRef.ElementId!,
+            LineChartRef.Element.Id,
             "line",
             data,
             diagramData.lineChartOptionsExtension

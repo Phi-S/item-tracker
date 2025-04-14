@@ -27,7 +27,7 @@ public class DeleteItemActionCommandTests
         const string userId = "test_userid";
         var itemActionId = Random.Shared.NextInt64();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             UserId = userId,
             Name = "test_listname",
@@ -36,19 +36,19 @@ public class DeleteItemActionCommandTests
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
             Id = itemActionId,
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "B",
             UnitPrice = 1,
             Amount = 1,
-            CreatedUtc = default
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
         

@@ -26,15 +26,15 @@ public class DeleteItemActionCommandHandler : IRequestHandler<DeleteItemActionCo
         }
 
         var action = await _unitOfWork.ItemListRepo.GetItemActionById(request.ItemActionId);
-        if (action.List.UserId.Equals(request.UserId) == false)
+        if (action.ListId.UserId.Equals(request.UserId) == false)
         {
             return Error.Unauthorized(
-                description: $"The list \"{action.List.Url}\" dose not belong to the user \"{request.UserId}\"");
+                description: $"The list \"{action.ListId.Url}\" dose not belong to the user \"{request.UserId}\"");
         }
 
-        await _unitOfWork.ItemListRepo.DeleteItemAction(action.List, request.ItemActionId);
+        await _unitOfWork.ItemListRepo.DeleteItemAction(action.ListId, request.ItemActionId);
         await _unitOfWork.Save();
-        _listResponseCacheService.DeleteCache(action.List.Url);
+        _listResponseCacheService.DeleteCache(action.ListId.Url);
         return Result.Deleted;
     }
 }

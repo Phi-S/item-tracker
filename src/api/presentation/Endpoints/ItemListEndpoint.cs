@@ -113,12 +113,12 @@ public static class ItemListEndpoint
             HttpContext context,
             IMediator mediator,
             string url,
-            [FromQuery] long itemId,
+            [FromQuery] string itemName,
             [FromQuery] long unitPrice,
             [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
-            var addItemActionBuyCommand = new AddItemActionBuyCommand(userId, url, itemId, unitPrice, amount);
+            var addItemActionBuyCommand = new AddItemActionBuyCommand(userId, url, itemName, unitPrice, amount);
             var result = await mediator.Send(addItemActionBuyCommand);
             if (result.IsError)
             {
@@ -134,12 +134,12 @@ public static class ItemListEndpoint
             HttpContext context,
             IMediator mediator,
             string url,
-            [FromQuery] long itemId,
+            [FromQuery] string itemName,
             [FromQuery] long unitPrice,
             [FromQuery] int amount) =>
         {
             var userId = context.User.Id();
-            var addItemActionSellCommand = new AddItemActionSellCommand(userId, url, itemId, unitPrice, amount);
+            var addItemActionSellCommand = new AddItemActionSellCommand(userId, url, itemName, unitPrice, amount);
             var result = await mediator.Send(addItemActionSellCommand);
             if (result.IsError)
             {

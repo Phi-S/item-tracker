@@ -16,7 +16,7 @@ public class ItemListRepo
 
     #region List
 
-    public async Task<ItemListDbModel> CreateNewList(
+    public async Task<ListDbModel> CreateNewList(
         string userId,
         string url,
         string listName,
@@ -25,7 +25,7 @@ public class ItemListRepo
         bool makeListPublic)
     {
         var currentDateTimeUtc = DateTime.UtcNow;
-        var itemList = await _dbContext.Lists.AddAsync(new ItemListDbModel
+        var itemList = await _dbContext.Lists.AddAsync(new ListDbModel
         {
             UserId = userId,
             Name = listName,
@@ -34,8 +34,8 @@ public class ItemListRepo
             Currency = currency,
             Public = makeListPublic,
             Deleted = false,
-            UpdatedUtc = currentDateTimeUtc,
-            CreatedUtc = currentDateTimeUtc
+            UpdatedAt = currentDateTimeUtc,
+            CreatedAt = currentDateTimeUtc
         });
         return itemList.Entity;
     }
@@ -67,7 +67,7 @@ public class ItemListRepo
         listToRemove.Deleted = true;
     }
 
-    public Task<List<ItemListDbModel>> GetAllListsForUser(string userId)
+    public Task<List<ListDbModel>> GetAllListsForUser(string userId)
     {
         return Task.FromResult(_dbContext.Lists.Where(list => list.Deleted == false && list.UserId.Equals(userId))
             .ToList());
@@ -79,7 +79,7 @@ public class ItemListRepo
             list.Deleted == false && list.UserId.Equals(userId) && list.Name.Equals(listName));
     }
 
-    public async Task<ErrorOr<ItemListDbModel>> GetListByUrl(string url)
+    public async Task<ErrorOr<ListDbModel>> GetListByUrl(string url)
     {
         var list = await _dbContext.Lists.FirstOrDefaultAsync(list => list.Url.Equals(url));
         if (list is null)
@@ -98,10 +98,10 @@ public class ItemListRepo
     #endregion
 
 
-    public Task<int> GetListItemCount(long listId, long itemId)
+    public Task<int> GetListItemCount(long listId, string itemName)
     {
         var actionsForItemId = _dbContext.ItemActions
-            .Where(action => action.List.Id == listId && action.ItemId == itemId).OrderBy(action => action.CreatedUtc);
+            .Where(action => action.List.Id == listId && action.ItemName == itemName).OrderBy(action => action.CreatedUtc);
         var itemCount = 0;
         foreach (var action in actionsForItemId)
         {
@@ -123,21 +123,21 @@ public class ItemListRepo
         return Task.FromResult(itemCount);
     }
 
-    public Task<IQueryable<ItemListItemActionDbModel>> GetAllItemActionsForListUntil(long listId, DateTime until)
+    public Task<IQueryable<ListActionDbModel>> GetAllItemActionsForListUntil(long listId, DateTime until)
     {
         return Task.FromResult(
             _dbContext.ItemActions.Where(action => action.List.Id == listId && action.CreatedUtc <= until));
     }
 
-    public Task<IQueryable<ItemListItemActionDbModel>> GetAllItemActionsForList(long listId)
+    public Task<IQueryable<ListActionDbModel>> GetAllItemActionsForList(long listId)
     {
         return Task.FromResult(
             _dbContext.ItemActions.Where(action => action.List.Id == listId));
     }
 
     public async Task AddItemAction(string actionType,
-        ItemListDbModel list,
-        long itemId,
+        ListDbModel list,
+        string itemName,
         long unitPrice,
         int amount)
     {
@@ -148,26 +148,26 @@ public class ItemListRepo
         }
 
         var currentDate = DateTime.UtcNow;
-        var listItem = new ItemListItemActionDbModel
+        var listItem = new ListActionDbModel
         {
-            List = list,
-            ItemId = itemId,
+            ListId = list,
+            ItemName = itemName,
             Action = actionType,
             UnitPrice = unitPrice,
             Amount = amount,
-            CreatedUtc = currentDate
+            CreatedAt = currentDate
         };
         await _dbContext.ItemActions.AddAsync(listItem);
     }
 
-    public async Task DeleteItemAction(ItemListDbModel list, long itemActionId)
+    public async Task DeleteItemAction(ListDbModel list, long itemActionId)
     {
         var actionToDelete =
             await _dbContext.ItemActions.FirstAsync(action => action.Id == itemActionId && action.List.Id == list.Id);
         _dbContext.ItemActions.Remove(actionToDelete);
     }
 
-    public Task<ItemListItemActionDbModel> GetItemActionById(long actionId)
+    public Task<ListActionDbModel> GetItemActionById(long actionId)
     {
         return _dbContext.ItemActions.Include(action => action.List).FirstAsync(action => action.Id == actionId);
     }

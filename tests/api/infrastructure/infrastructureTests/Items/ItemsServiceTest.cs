@@ -45,7 +45,7 @@ public class ItemsServiceTest
         Assert.False(allItems.IsError);
         var randomSkip = Random.Shared.Next(allItems.Value.Count);
         var randomItem = _itemsService.GetAll().Value.Skip(randomSkip).First();
-        var result = _itemsService.GetById(randomItem.Id);
+        var result = _itemsService.GetByName(randomItem.Id);
         Assert.False(result.IsError);
         Assert.Equal(randomItem, result.Value);
         Assert.Equal(randomItem.Id, result.Value.Id);

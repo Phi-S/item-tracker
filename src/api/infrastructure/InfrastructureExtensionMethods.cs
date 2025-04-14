@@ -1,10 +1,13 @@
-﻿using infrastructure.Database;
+﻿using DbUp;
+using infrastructure.Database;
 using infrastructure.Database.Repos;
 using infrastructure.ExchangeRates;
 using infrastructure.ItemPriceFolder;
 using infrastructure.Items;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Throw;
 
 namespace infrastructure;
 
@@ -14,18 +17,37 @@ public static class InfrastructureExtensionMethods
     {
         #region Database
 
-        serviceCollection.AddDbContext<XDbContext>();
+        Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
         // Migrate database
         using (var migrationServiceProvider = serviceCollection.BuildServiceProvider())
         {
-            using (var dbContext = migrationServiceProvider.GetRequiredService<XDbContext>())
-            {
-                dbContext.Database.Migrate();
-            }
-        }
+            var loggerFactory = migrationServiceProvider.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("database migration");
 
-        serviceCollection.AddScoped<UnitOfWork>();
+            var configuration = migrationServiceProvider.GetRequiredService<IConfiguration>();
+            var databaseConnectionString = configuration.GetValue<string>("DatabaseConnectionString");
+            databaseConnectionString.ThrowIfNull().IfEmpty().IfWhiteSpace();
+
+            serviceCollection.AddSingleton<IDbConnectionFactory>(new DbConnectionFactory(databaseConnectionString));
+            EnsureDatabase.For.PostgresqlDatabase(databaseConnectionString);
+
+            var upgrader =
+                DeployChanges.To
+                    .PostgresqlDatabase(databaseConnectionString)
+                    .WithScriptsAndCodeEmbeddedInAssembly(typeof(ItemsService).Assembly)
+                    .LogTo(logger)
+                    .Build();
+
+            var result = upgrader.PerformUpgrade();
+
+            if (result.Successful == false)
+            {
+                throw new Exception($"failed to upgrade database. {result.Error}");
+            }
+
+            logger.LogInformation("upgrading database successfully");
+        }
 
         #endregion
 

@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -18,26 +19,6 @@ public class ItemPriceService
         _httpClient = httpClient;
     }
 
-    public async Task<ErrorOr<(ProviderPricesModel steamPrices, ProviderPricesModel buff163Prices)>> GetPrices()
-    {
-        var steamPricesTask = GetSteamPrices();
-        var buffPricesTask = GetBuffPrices();
-        await Task.WhenAll(steamPricesTask, buffPricesTask);
-        var steamPricesResult = steamPricesTask.Result;
-        if (steamPricesResult.IsError)
-        {
-            return steamPricesResult.FirstError;
-        }
-
-        var buffPricesResult = buffPricesTask.Result;
-        if (buffPricesResult.IsError)
-        {
-            return buffPricesResult.FirstError;
-        }
-        
-        return (steamPricesResult.Value, buffPricesResult.Value);
-    }
-
     private async Task<ErrorOr<ProviderPricesModel>> GetSteamPrices()
     {
         var pricesResponse = await GetPricesJson("steam");
@@ -52,31 +33,6 @@ public class ItemPriceService
         foreach (var (name, priceJson) in prices)
         {
             var price = GetSteamPriceFromJson(priceJson);
-            if (price.IsError)
-            {
-                return price.FirstError;
-            }
-
-            result.Add((name, price.Value));
-        }
-
-        return new ProviderPricesModel(pricesResponse.lastModified, result);
-    }
-
-    private async Task<ErrorOr<ProviderPricesModel>> GetBuffPrices()
-    {
-        var pricesResponse = await GetPricesJson("buff163");
-        var prices =
-            JsonSerializer.Deserialize<Dictionary<string, JsonObject>>(pricesResponse.json, JsonSerializerOptions);
-        if (prices is null)
-        {
-            return Error.Failure("Failed to Deserialize price json");
-        }
-
-        var result = new List<(string itemName, decimal? price)>();
-        foreach (var (name, priceJson) in prices)
-        {
-            var price = GetBuffPriceModelFromJson(priceJson);
             if (price.IsError)
             {
                 return price.FirstError;
@@ -172,58 +128,5 @@ public class ItemPriceService
 
             return steamPrice;
         }
-    }
-
-    private static ErrorOr<decimal?> GetBuffPriceModelFromJson(JsonObject jsonObject)
-    {
-        ErrorOr<decimal?> GetBuffPrice(JsonNode jsonNode, string jsonPropertyName)
-        {
-            foreach (var node in jsonNode.AsObject())
-            {
-                if (node.Key.Equals(jsonPropertyName) == false)
-                {
-                    continue;
-                }
-
-                if (node.Value is null)
-                {
-                    return (decimal?)null;
-                }
-
-                if (node.Value.AsObject().First().Key.Equals("price") &&
-                    node.Value.AsObject().First().Value is null)
-                {
-                    return (decimal?)null;
-                }
-            }
-
-            var priceString = jsonNode[jsonPropertyName]?["price"]?.ToString();
-            if (string.IsNullOrWhiteSpace(priceString) ||
-                decimal.TryParse(priceString, NumberStyles.Float, CultureInfo.InvariantCulture, out var price) == false)
-            {
-                return Error.Failure($"Item dose not have buff price for \"{jsonPropertyName}\"");
-            }
-
-            return price;
-        }
-
-        var buffPriceStartingAt = GetBuffPrice(jsonObject, "starting_at");
-        if (buffPriceStartingAt.IsError)
-        {
-            return buffPriceStartingAt.FirstError;
-        }
-
-        if (buffPriceStartingAt.Value is not null)
-        {
-            return buffPriceStartingAt.Value.Value;
-        }
-
-        var buffPriceHighestOrder = GetBuffPrice(jsonObject, "highest_order");
-        if (buffPriceHighestOrder.IsError)
-        {
-            return buffPriceHighestOrder.FirstError;
-        }
-
-        return buffPriceHighestOrder.Value;
     }
 }

@@ -28,7 +28,7 @@ public class UpdateListDescriptionCommandTests
         var dbContext = provider.GetRequiredService<XDbContext>();
         var userId = RandomHelper.RandomString();
         var listUrl = RandomHelper.RandomString();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             UserId = userId,
             Name = "test_list",
@@ -36,8 +36,8 @@ public class UpdateListDescriptionCommandTests
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
         Assert.True(list.Entity.Description is null);

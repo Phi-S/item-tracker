@@ -31,7 +31,7 @@ public class AddItemActionSellCommandTests
         var itemId = 1;
         var unitPrice = 2;
         var amount = 3;
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             UserId = userId,
             Name = "test_list",
@@ -39,18 +39,18 @@ public class AddItemActionSellCommandTests
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = itemId,
             Action = "B",
             UnitPrice = 1,
             Amount = amount,
-            CreatedUtc = default
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 

@@ -60,7 +60,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -70,8 +70,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -90,7 +90,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -100,8 +100,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -120,7 +120,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -130,8 +130,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -150,7 +150,7 @@ public class ItemListRepoTest
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
         const long listId = 111;
-        await dbContext.Lists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = listId,
             UserId = "test_user_id",
@@ -159,8 +159,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -179,7 +179,7 @@ public class ItemListRepoTest
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
         var userId = "test_user_id";
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -189,8 +189,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -209,7 +209,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string userId = "test_user_id";
         const string listName = "test_list_name";
-        await dbContext.Lists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -218,8 +218,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -237,7 +237,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string userId = "test_user_id";
         const string listName = "test_list_name";
-        await dbContext.Lists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -246,8 +246,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -265,7 +265,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string userId = "test_user_id";
         const string listName = "test_list_name";
-        await dbContext.Lists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = userId,
@@ -274,8 +274,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -293,7 +293,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string listUrl = "test_list_url";
         const bool deleted = false;
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "test_user_id",
@@ -302,8 +302,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = deleted,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -323,7 +323,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string listUrl = "test_list_url";
         const bool deleted = true;
-        await dbContext.Lists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "test_user_id",
@@ -332,8 +332,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = deleted,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -351,7 +351,7 @@ public class ItemListRepoTest
         var dbContext = provider.GetRequiredService<XDbContext>();
         const string listUrl = "test_list_url";
         const bool deleted = false;
-        await dbContext.Lists.AddAsync(new ItemListDbModel
+        await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "test_user_id",
@@ -360,8 +360,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = deleted,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
@@ -380,7 +380,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -390,41 +390,41 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
             Id = 1,
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "B",
             UnitPrice = 0,
             Amount = 1,
-            CreatedUtc = default
+            CreatedAt = default
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
             Id = 2,
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "S",
             UnitPrice = 0,
             Amount = 1,
-            CreatedUtc = default
+            CreatedAt = default
         });
 
-        await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
             Id = 3,
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "B",
             UnitPrice = 0,
             Amount = 5,
-            CreatedUtc = default
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
@@ -439,7 +439,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -449,8 +449,8 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
@@ -469,7 +469,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -479,18 +479,18 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
-        var action = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        var action = await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
             Id = 1,
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "B",
             UnitPrice = 0,
             Amount = 1,
-            CreatedUtc = default
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
         Assert.Equal(1, dbContext.ItemActions.Count());
@@ -506,7 +506,7 @@ public class ItemListRepoTest
         var serviceCollection = await ServicesSetup.GetApiInfrastructureCollection(_outputHelper);
         await using var provider = serviceCollection.BuildServiceProvider();
         var dbContext = provider.GetRequiredService<XDbContext>();
-        var list = await dbContext.Lists.AddAsync(new ItemListDbModel
+        var list = await dbContext.Lists.AddAsync(new ListDbModel
         {
             Id = 1,
             UserId = "user_id",
@@ -516,25 +516,25 @@ public class ItemListRepoTest
             Currency = "EUR",
             Public = false,
             Deleted = false,
-            UpdatedUtc = default,
-            CreatedUtc = default
+            UpdatedAt = default,
+            CreatedAt = default
         });
-        var action = await dbContext.ItemActions.AddAsync(new ItemListItemActionDbModel
+        var action = await dbContext.ItemActions.AddAsync(new ListActionDbModel
         {
             Id = 1,
-            List = list.Entity,
+            ListId = list.Entity,
             ItemId = 1,
             Action = "B",
             UnitPrice = 1,
             Amount = 1,
-            CreatedUtc = default
+            CreatedAt = default
         });
         await dbContext.SaveChangesAsync();
 
         var unitOfWork = provider.GetRequiredService<UnitOfWork>();
         var actionFromDb = await unitOfWork.ItemListRepo.GetItemActionById(action.Entity.Id);
         Assert.Equal(action.Entity.Id, actionFromDb.Id);
-        Assert.Equal(action.Entity.List.Id, actionFromDb.List.Id);
+        Assert.Equal(action.Entity.List.Id, actionFromDb.ListId.Id);
         Assert.Equal(action.Entity.ItemId, actionFromDb.ItemId);
         Assert.Equal(action.Entity.Action, actionFromDb.Action);
         Assert.Equal(action.Entity.UnitPrice, actionFromDb.UnitPrice);
