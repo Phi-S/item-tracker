@@ -9,7 +9,7 @@ namespace application.Commands.List;
 public record AddItemActionBuyCommand(
     string? UserId,
     string ListUrl,
-    long ItemId,
+    string ItemName,
     long UnitPrice,
     int Amount) : IRequest<ErrorOr<Created>>;
 
@@ -36,7 +36,7 @@ public class AddItemActionBuyHandler : IRequestHandler<AddItemActionBuyCommand, 
             return Error.Unauthorized(description: "UserId not found");
         }
 
-        var item = _itemsService.GetById(request.ItemId);
+        var item = _itemsService.GetByName(request.ItemName);
         if (item.IsError)
         {
             return item.FirstError;
@@ -67,7 +67,7 @@ public class AddItemActionBuyHandler : IRequestHandler<AddItemActionBuyCommand, 
         await _unitOfWork.ItemListRepo.AddItemAction(
             "B",
             list.Value,
-            request.ItemId,
+            request.ItemName,
             request.UnitPrice,
             request.Amount);
 

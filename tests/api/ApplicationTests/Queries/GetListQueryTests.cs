@@ -105,7 +105,6 @@ public class GetListQueryTests
         {
             UsdToEurExchangeRate = 2,
             SteamPricesLastModified = default,
-            Buff163PricesLastModified = default,
             CreatedUtc = default
         });
 
@@ -113,7 +112,6 @@ public class GetListQueryTests
         {
             ItemId = 1,
             SteamPriceCentsUsd = 1,
-            Buff163PriceCentsUsd = 2,
             ItemPriceRefresh = priceRefresh.Entity
         });
 
@@ -121,7 +119,6 @@ public class GetListQueryTests
         {
             ItemId = 2,
             SteamPriceCentsUsd = 3,
-            Buff163PriceCentsUsd = 4,
             ItemPriceRefresh = priceRefresh.Entity
         });
 
@@ -129,7 +126,6 @@ public class GetListQueryTests
         {
             ItemId = 3,
             SteamPriceCentsUsd = 5,
-            Buff163PriceCentsUsd = 6,
             ItemPriceRefresh = priceRefresh.Entity
         });
 
@@ -151,7 +147,6 @@ public class GetListQueryTests
         Assert.Equal(9, listResponse.ItemCount);
         Assert.Equal(27, listResponse.InvestedCapital);
         Assert.Equal(62, result.Value.SteamSellPrice);
-        Assert.Equal(80, result.Value.Buff163SellPrice);
         Assert.Equal(3, result.Value.Items.Count);
         Assert.Contains(listResponse.Items, item => item.ItemId == 1);
         Assert.Contains(listResponse.Items, item => item.ItemId == 2);

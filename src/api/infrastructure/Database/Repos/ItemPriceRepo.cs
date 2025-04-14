@@ -16,15 +16,13 @@ public class ItemPriceRepo
 
     public async Task<ItemPriceRefreshDbModel> CreateNew(
         double usdToEurExchangeRate,
-        DateTime steamPricesLastModified,
-        DateTime buff163PricesLastModified)
+        DateTime steamPricesLastModified)
     {
         var newItemPriceRefresh = await _dbContext.PricesRefresh.AddAsync(
             new ItemPriceRefreshDbModel
             {
                 UsdToEurExchangeRate = usdToEurExchangeRate,
                 SteamPricesLastModified = steamPricesLastModified,
-                Buff163PricesLastModified = buff163PricesLastModified,
                 CreatedUtc = DateTime.UtcNow
             });
         return newItemPriceRefresh.Entity;
@@ -53,15 +51,15 @@ public class ItemPriceRepo
             _dbContext.PricesRefresh.Where(priceRefresh => priceRefresh.CreatedUtc >= since).ToList());
     }
 
-    public async Task<ErrorOr<ItemPriceDbModel>> GetPriceForItem(long itemId, ItemPriceRefreshDbModel priceRefresh)
+    public async Task<ErrorOr<ItemPriceDbModel>> GetPriceForItem(string itemName, ItemPriceRefreshDbModel priceRefresh)
     {
         var price = await _dbContext.Prices.FirstOrDefaultAsync(price =>
-            price.ItemPriceRefresh.Id == priceRefresh.Id && price.ItemId == itemId);
+            price.ItemPriceRefresh.Id == priceRefresh.Id && price.ItemName == itemName);
         if (price is null)
         {
             return Error.NotFound(
                 description:
-                $"No price found for item with the id \"{itemId}\" and the price refresh: Id: {priceRefresh.Id} CreatedUtc: {priceRefresh.CreatedUtc}");
+                $"No price found for item \"{itemName}\" and the price refresh: Id: {priceRefresh.Id} CreatedUtc: {priceRefresh.CreatedUtc}");
         }
 
         return price;

@@ -113,11 +113,11 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             new List<Task<ErrorOr<(ListItemResponse listItemResponse, Dictionary<DateOnly, ItemSnapshotForDay>
                 snapshotsResult)>>>();
         var actions = await _unitOfWork.ItemListRepo.GetAllItemActionsForList(list.Id);
-        var itemIdsWithActionsGrouping = actions.GroupBy(action => action.ItemId).ToList();
-        foreach (var itemIdsWithActions in itemIdsWithActionsGrouping)
+        var itemIdsWithActionsGrouping = actions.GroupBy(action => action.ItemName).ToList();
+        foreach (var itemNamesWithActions in itemIdsWithActionsGrouping)
         {
             processItemsTasks.Add(
-                GetListItemResponseWithItemSnapshots(snapshotsDays, list, itemIdsWithActions, priceRefreshes)
+                GetListItemResponseWithItemSnapshots(snapshotsDays, list, itemNamesWithActions, priceRefreshes)
             );
         }
 
@@ -129,9 +129,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         long listInvestedCapital = 0;
         var listItemCount = 0;
         long? listSteamPrice = null;
-        long? listBuff163Price = null;
         long? listSteamPerformanceValue = null;
-        long? listBuff163PerformanceValue = null;
         foreach (var processItemsTask in processItemsTasks)
         {
             var result = processItemsTask.Result;
@@ -162,27 +160,14 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 listSteamPrice += listItemResponse.SteamSellPriceForOne.Value * listItemResponse.ItemCount;
             }
 
-            if (listItemResponse.Buff163SellPriceForOne is not null)
-            {
-                listBuff163Price ??= 0;
-                listBuff163Price += listItemResponse.Buff163SellPriceForOne.Value * listItemResponse.ItemCount;
-            }
-
             if (listItemResponse.SteamPerformanceValue is not null)
             {
                 listSteamPerformanceValue ??= 0;
                 listSteamPerformanceValue += listItemResponse.SteamPerformanceValue;
             }
-
-            if (listItemResponse.Buff163PerformanceValue is not null)
-            {
-                listBuff163PerformanceValue ??= 0;
-                listBuff163PerformanceValue += listItemResponse.Buff163PerformanceValue;
-            }
         }
 
         var totalSteamPerformancePercent = GetPerformancePercent(listSteamPrice, listInvestedCapital);
-        var totalBuff163PerformancePercent = GetPerformancePercent(listBuff163Price, listInvestedCapital);
 
         var snapshots = itemSnapshots.Select(pair => GetListSnapshot(pair.Key, pair.Value)).ToList();
 
@@ -198,11 +183,8 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             listItemCount,
             listInvestedCapital,
             listSteamPrice,
-            listBuff163Price,
             totalSteamPerformancePercent,
-            totalBuff163PerformancePercent,
             listSteamPerformanceValue,
-            listBuff163PerformanceValue,
             listItemResponses,
             snapshots
         );
@@ -215,8 +197,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         long TotalItemCount,
         long SalesValue,
         long Profit,
-        long? SteamValueForOne,
-        long? Buff163ValueForOne
+        long? SteamValueForOne
     );
 
     private async
@@ -224,7 +205,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         GetListItemResponseWithItemSnapshots(
             IEnumerable<DateOnly> snapshotDays,
             ItemListDbModel list,
-            IGrouping<long, ItemListItemActionDbModel> itemWithActions,
+            IGrouping<string, ItemListItemActionDbModel> itemWithActions,
             IReadOnlyCollection<ItemPriceRefreshDbModel> priceRefreshes)
     {
         var itemId = itemWithActions.Key;
@@ -257,7 +238,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 break;
             }
 
-            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0, null, null));
+            snapshotsResult.Add(snapshotDaysEnumerator.Current, new ItemSnapshotForDay(0, 0, 0, 0, null));
         }
 
         var actions = itemWithActions.OrderBy(action => action.CreatedUtc).ToList();
@@ -425,9 +406,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 return latestPricesResult.FirstError;
             }
 
-            var latestPrice = latestPricesResult.Value;
-            steamPrice = latestPrice.steamPrice;
-            buff163Price = latestPrice.buff163Price;
+            steamPrice = latestPricesResult.Value;
         }
 
         var steamPerformancePercent = GetPerformancePercent(steamPrice, averageBuyPrice);
@@ -436,7 +415,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         var steamPerformanceValue = GetPerformanceValue(steamPrice, averageBuyPrice, itemCount);
         var buff163PerformanceValue = GetPerformanceValue(buff163Price, averageBuyPrice, itemCount);
 
-        var itemResult = _itemsService.GetById(itemId);
+        var itemResult = _itemsService.GetByName(itemId);
         if (itemResult.IsError)
         {
             throw new Exception("ItemId is not valid");
@@ -471,7 +450,7 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         List<long> buyPrices,
         ItemPriceRefreshDbModel? closestPriceRefresh,
         string currency,
-        long itemId,
+        string itemName,
         long salesValue,
         long salesProfit)
     {
@@ -488,25 +467,23 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
                 itemCount,
                 salesValue,
                 salesProfit,
-                null,
                 null
             );
         }
 
-        var getPriceResult = await GetPrice(currency, itemId, closestPriceRefresh);
+        var getPriceResult = await GetPrice(currency, itemName, closestPriceRefresh);
         if (getPriceResult.IsError)
         {
             return getPriceResult.FirstError;
         }
 
-        var (steamPrice, buff163Price) = getPriceResult.Value;
+        var steamPrice = getPriceResult.Value;
         var snap = new ItemSnapshotForDay(
             investedCapitalForItem,
             itemCount,
             salesValue,
             salesProfit,
-            steamPrice,
-            buff163Price
+            steamPrice
         );
         return snap;
     }
@@ -542,11 +519,6 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             {
                 steamValue += snapshotForItem.SteamValueForOne * snapshotForItem.TotalItemCount;
             }
-
-            if (snapshotForItem.Buff163ValueForOne is not null)
-            {
-                buff163Value += snapshotForItem.Buff163ValueForOne * snapshotForItem.TotalItemCount;
-            }
         }
 
         return new ListSnapshotResponse(
@@ -576,9 +548,9 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         return (long?)((current - old) * itemCount);
     }
 
-    private async Task<ErrorOr<(long? steamPrice, long? buff163Price)>> GetPrice(
+    private async Task<ErrorOr<long?>> GetPrice(
         string currency,
-        long itemId,
+        string itemName,
         ItemPriceRefreshDbModel priceRefresh
     )
     {
@@ -586,12 +558,12 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
         var unitOfWork = scope.ServiceProvider.GetRequiredService<UnitOfWork>();
 
         var priceForItemIdResult =
-            await unitOfWork.ItemPriceRepo.GetPriceForItem(itemId, priceRefresh);
+            await unitOfWork.ItemPriceRepo.GetPriceForItem(itemName, priceRefresh);
         if (priceForItemIdResult.IsError)
         {
             if (priceForItemIdResult.FirstError.Type == ErrorType.NotFound)
             {
-                return (null, null);
+                return (long?)null;
             }
 
             return priceForItemIdResult.FirstError;
@@ -618,25 +590,6 @@ public class GetListHandler : IRequestHandler<GetListQuery, ErrorOr<ListResponse
             }
         }
 
-        long? buff163Value = null;
-        if (priceForItemId.Buff163PriceCentsUsd is not null)
-        {
-            if (currency.Equals(CurrenciesConstants.USD))
-            {
-                buff163Value = priceForItemId.Buff163PriceCentsUsd.Value;
-            }
-            else if (currency.Equals(CurrenciesConstants.EURO))
-            {
-                buff163Value = ExchangeRateHelper.ApplyExchangeRate(
-                    priceForItemId.Buff163PriceCentsUsd.Value,
-                    priceRefresh.UsdToEurExchangeRate);
-            }
-            else
-            {
-                return Error.Failure(description: $"Currency \"{currency}\" is not implemented");
-            }
-        }
-
-        return (steamValue, buff163Value);
+        return steamValue;
     }
 }

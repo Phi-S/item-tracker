@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestHelperTests", "tests\Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApplicationTests", "tests\api\ApplicationTests\ApplicationTests.csproj", "{6F7F50C8-BE73-4591-8952-3E95D4F14AFA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ItemFetcher", "tools\ItemFetcher\ItemFetcher.csproj", "{9B3C68A5-2931-4466-A435-543023474C80}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,6 +77,10 @@ Global
 		{6F7F50C8-BE73-4591-8952-3E95D4F14AFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F7F50C8-BE73-4591-8952-3E95D4F14AFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F7F50C8-BE73-4591-8952-3E95D4F14AFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B3C68A5-2931-4466-A435-543023474C80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B3C68A5-2931-4466-A435-543023474C80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B3C68A5-2931-4466-A435-543023474C80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B3C68A5-2931-4466-A435-543023474C80}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

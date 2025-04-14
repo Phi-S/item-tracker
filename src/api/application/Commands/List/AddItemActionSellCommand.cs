@@ -9,7 +9,7 @@ namespace application.Commands.List;
 public record AddItemActionSellCommand(
     string? UserId,
     string ListUrl,
-    long ItemId,
+    string ItemName,
     long UnitPrice,
     int Amount
 ) : IRequest<ErrorOr<Created>>;
@@ -37,7 +37,7 @@ public class AddItemActionSellHandler : IRequestHandler<AddItemActionSellCommand
             return Error.Unauthorized(description: "UserId not found");
         }
 
-        var item = _itemsService.GetById(request.ItemId);
+        var item = _itemsService.GetByName(request.ItemName);
         if (item.IsError)
         {
             return item.FirstError;
@@ -65,17 +65,17 @@ public class AddItemActionSellHandler : IRequestHandler<AddItemActionSellCommand
             return Error.Failure(description: "Cant sell more then 5000 items at once");
         }
 
-        var currentItemCount = await _unitOfWork.ItemListRepo.GetListItemCount(list.Value.Id, request.ItemId);
+        var currentItemCount = await _unitOfWork.ItemListRepo.GetListItemCount(list.Value.Id, request.ItemName);
         if (request.Amount > currentItemCount)
         {
             return Error.Conflict(description:
-                $"Cant sell {request.Amount} items if the list \"{request.ListUrl}\" only contains {currentItemCount} items with the id \"{request.ItemId}\"");
+                $"Cant sell {request.Amount} items if the list \"{request.ListUrl}\" only contains {currentItemCount} items for \"{request.ItemName}\"");
         }
 
         await _unitOfWork.ItemListRepo.AddItemAction(
             "S",
             list.Value,
-            request.ItemId,
+            request.ItemName,
             request.UnitPrice,
             request.Amount);
         await _unitOfWork.Save();

@@ -21,6 +21,9 @@
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="Database\Migrations\20250414212837_V2_items.json">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </EmbeddedResource>
         <EmbeddedResource Include="Items\items.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </EmbeddedResource>

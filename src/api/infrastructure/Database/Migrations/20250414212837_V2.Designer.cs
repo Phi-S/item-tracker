@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using infrastructure.Database;
@@ -11,9 +12,11 @@ using infrastructure.Database;
 namespace infrastructure.Database.Migrations
 {
     [DbContext(typeof(XDbContext))]
-    partial class XDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250414212837_AddedItemName")]
+    partial class V2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,6 +96,9 @@ namespace infrastructure.Database.Migrations
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<long>("ItemId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("ItemName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -105,8 +111,6 @@ namespace infrastructure.Database.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ItemName");
 
                     b.HasIndex("ListId");
 
@@ -121,6 +125,9 @@ namespace infrastructure.Database.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<long>("ItemId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("ItemName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -133,8 +140,6 @@ namespace infrastructure.Database.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ItemName");
 
                     b.HasIndex("ItemPriceRefreshId");
 

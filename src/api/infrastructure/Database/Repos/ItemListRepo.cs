@@ -98,10 +98,11 @@ public class ItemListRepo
     #endregion
 
 
-    public Task<int> GetListItemCount(long listId, long itemId)
+    public Task<int> GetListItemCount(long listId, string itemName)
     {
         var actionsForItemId = _dbContext.ItemActions
-            .Where(action => action.List.Id == listId && action.ItemId == itemId).OrderBy(action => action.CreatedUtc);
+            .Where(action => action.List.Id == listId && action.ItemName == itemName)
+            .OrderBy(action => action.CreatedUtc);
         var itemCount = 0;
         foreach (var action in actionsForItemId)
         {
@@ -137,7 +138,7 @@ public class ItemListRepo
 
     public async Task AddItemAction(string actionType,
         ItemListDbModel list,
-        long itemId,
+        string itemName,
         long unitPrice,
         int amount)
     {
@@ -151,7 +152,7 @@ public class ItemListRepo
         var listItem = new ItemListItemActionDbModel
         {
             List = list,
-            ItemId = itemId,
+            ItemName = itemName,
             Action = actionType,
             UnitPrice = unitPrice,
             Amount = amount,

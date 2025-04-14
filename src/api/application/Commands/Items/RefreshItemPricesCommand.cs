@@ -63,8 +63,7 @@ public class RefreshItemPricesCommandHandler : IRequestHandler<RefreshItemPrices
 
         var priceRefresh = await _unitOfWork.ItemPriceRepo.CreateNew(
             Math.Round(usdEurExchangeRate.Value, 2, MidpointRounding.ToZero),
-            steamPrices.LastModified,
-            buff163Prices.LastModified
+            steamPrices.LastModified
         );
 
         var dbPrices = new ConcurrentBag<ItemPriceDbModel>();
@@ -75,14 +74,11 @@ public class RefreshItemPricesCommandHandler : IRequestHandler<RefreshItemPrices
             {
                 var steamPrice = steamPrices.Prices.Where(price => price.itemName.Equals(item.Name))
                     .Select(price => price.price).FirstOrDefault();
-                var buff163Price = buff163Prices.Prices.Where(price => price.itemName.Equals(item.Name))
-                    .Select(price => price.price).FirstOrDefault();
 
                 var dbPrice = new ItemPriceDbModel
                 {
-                    ItemId = item.Id,
+                    ItemName = item.Name,
                     SteamPriceCentsUsd = steamPrice is null ? null : (int)(steamPrice.Value * 100),
-                    Buff163PriceCentsUsd = buff163Price is null ? null : (int)(buff163Price.Value * 100),
                     ItemPriceRefresh = priceRefresh
                 };
                 dbPrices.Add(dbPrice);
